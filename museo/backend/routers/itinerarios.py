@@ -39,11 +39,11 @@ async def verificar_estado_ia():
             "detalles": estado
         }
     
-    if not estado["modelo_disponible"]:
+    if not estado.get("modelo_disponible"):
         return {
             "estado": "modelo_no_disponible",
-            "mensaje": f"⚠️ El modelo {estado['modelo_configurado']} no está instalado",
-            "solucion": f"Ejecuta: ollama pull {estado['modelo_configurado']}",
+            "mensaje": f"⚠️ El modelo {estado.get('modelo_configurado')} no está instalado",
+            "solucion": f"Ejecuta: ollama pull {estado.get('modelo_configurado')}",
             "detalles": estado
         }
     
@@ -134,7 +134,7 @@ async def generar_itinerario_ia(
         nombre_completo = f"{visitante.nombre} {visitante.apellido or ''}".strip()
         
         try:
-            itinerario_ia = ia_service.generar_itinerario(
+            resultado_ia = ia_service.generar_itinerario(
                 visitante_nombre=nombre_completo,
                 intereses=solicitud.intereses,
                 tiempo_disponible=solicitud.tiempo_disponible,
@@ -152,15 +152,17 @@ async def generar_itinerario_ia(
         # 5. Crear itinerario en BD
         nuevo_itinerario = Itinerario(
             perfil_id=perfil.id,
-            titulo=itinerario_ia["titulo"],
-            descripcion=itinerario_ia["descripcion"],
-            duracion_total=itinerario_ia["duracion_total"],
+            titulo=resultado_ia["titulo"],
+            descripcion=resultado_ia["descripcion"],
+            duracion_total=resultado_ia["duracion_total"],
             estado='generado',
-            modelo_ia_usado=itinerario_ia["metadata"]["modelo"],
-            prompt_usado=itinerario_ia["metadata"]["prompt"],
+            modelo_ia_usado=resultado_ia["metadata"]["modelo"],
+            prompt_usado=resultado_ia["metadata"]["prompt"],
             respuesta_ia={
-                "respuesta_cruda": itinerario_ia["metadata"]["respuesta_cruda"],
-                "temperature": itinerario_ia["metadata"]["temperature"]
+                "respuesta_cruda": resultado_ia["metadata"]["respuesta_cruda"],
+                "temperature": resultado_ia["metadata"]["temperature"],
+                "tiempo_generacion": resultado_ia["metadata"]["tiempo_generacion"],
+                "timestamp": resultado_ia["metadata"]["timestamp"]
             }
         )
         
@@ -171,7 +173,7 @@ async def generar_itinerario_ia(
         # 6. Crear detalles del itinerario según la IA
         mapeo_areas = {area.codigo: area for area in areas_disponibles}
         
-        for area_ia in itinerario_ia["areas"]:
+        for area_ia in resultado_ia["areas"]:
             area_codigo = area_ia["area_codigo"]
             
             if area_codigo not in mapeo_areas:
@@ -219,7 +221,7 @@ async def crear_itinerario_manual(
     if not perfil:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
     
-    nuevo_itinerario = Itinerario(**itinerario.model_dump(exclude={'areas_seleccionadas'}))
+    nuevo_itinerario = Itinerario(**itinerario.model_dump())
     db.add(nuevo_itinerario)
     db.commit()
     db.refresh(nuevo_itinerario)

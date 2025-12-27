@@ -12,6 +12,7 @@ from datetime import datetime
 from config import get_settings
 from database import engine, Base
 
+
 # Configurar logging
 logging.basicConfig(
     level=logging.INFO,
@@ -183,7 +184,7 @@ async def global_exception_handler(request, exc):
 # IMPORTAR Y REGISTRAR ROUTERS
 # ============================================
 
-from routers import visitantes, perfiles, areas, itinerarios, itinerario_detalles, historial,ia
+from routers import visitantes, perfiles, areas, itinerarios, itinerario_detalles, historial,ia, auth_google
 
 # Registrar todos los routers
 app.include_router(visitantes.router, prefix=f"{settings.API_V1_PREFIX}/visitantes", tags=["Visitantes"])
@@ -193,6 +194,8 @@ app.include_router(itinerarios.router, prefix=f"{settings.API_V1_PREFIX}/itinera
 app.include_router(itinerario_detalles.router, prefix=f"{settings.API_V1_PREFIX}/detalles", tags=["Detalles de Itinerario"])
 app.include_router(historial.router, prefix=f"{settings.API_V1_PREFIX}/historial", tags=["Historial de Visitas"])
 app.include_router(ia.router, prefix=f"{settings.API_V1_PREFIX}/ia", tags=["Inteligencia Artificial"])
+app.include_router(auth_google.router,prefix=f"{settings.API_V1_PREFIX}/auth",tags=["🔐 Autenticación Google (YouTube + Maps)"])
+
 
 # ============================================
 # EJECUTAR APLICACIÓN

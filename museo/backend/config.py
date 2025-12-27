@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     OLLAMA_TIMEOUT: int = 120
     OLLAMA_TEMPERATURE: float = 0.7
     OLLAMA_MAX_TOKENS: int = 2000
+
+    # ============================================
+    # Google OAuth
+    # ============================================
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
+    REDIRECT_URI_BASE: str = "http://localhost:8000"
     
     # ============================================
     # CONFIGURACIÓN DE LOGGING

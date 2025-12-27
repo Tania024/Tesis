@@ -63,6 +63,8 @@ class Visitante(Base):
     
     def __repr__(self):
         return f"<Visitante {self.codigo_visita}: {self.nombre} {self.apellido}>"
+    
+
 
 
 # ============================================
@@ -268,3 +270,5 @@ class HistorialVisita(Base):
     
     def __repr__(self):
         return f"<Visita {self.fecha_visita} - Visitante {self.visitante_id}>"
+    
+

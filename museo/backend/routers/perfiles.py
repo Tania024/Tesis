@@ -8,11 +8,85 @@ from typing import List, Optional
 import logging
 
 from database import get_db
+from pydantic import BaseModel
 from models import Perfil, Visitante
 from schemas import PerfilCreate, PerfilUpdate, PerfilResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+class PreconfigurarPerfilRequest(BaseModel):
+    tiempo_disponible: int
+    nivel_detalle: str = "normal"
+
+class ConfirmarTiempoRequest(BaseModel):
+    tiempo_disponible: int
+    nivel_detalle: str = "normal"
+
+
+@router.post("/preconfigurar")
+def preconfigurar_perfil(
+    data: PreconfigurarPerfilRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Crea un perfil temporal antes del login social
+    """
+
+    perfil = Perfil(
+        intereses=[],  # aún no hay intereses
+        tiempo_disponible=data.tiempo_disponible,
+        nivel_detalle=data.nivel_detalle,
+        incluir_descansos=True
+    )
+
+    db.add(perfil)
+    db.commit()
+    db.refresh(perfil)
+
+    return {
+        "message": "Perfil preconfigurado correctamente",
+        "perfil_id": perfil.id,
+        "tiempo_disponible": perfil.tiempo_disponible,
+        "nivel_detalle": perfil.nivel_detalle,
+        "siguiente_paso": "Iniciar sesión con Google"
+    }
+
+
+
+# ==============================
+# ENDPOINT CONFIRMAR TIEMPO
+# ==============================
+
+@router.put("/confirmar-tiempo/{visitante_id}")
+def confirmar_tiempo(
+    visitante_id: int,
+    data: ConfirmarTiempoRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    El usuario confirma o modifica su tiempo disponible
+    """
+
+    perfil = db.query(Perfil).filter(
+        Perfil.visitante_id == visitante_id
+    ).first()
+
+    if not perfil:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    perfil.tiempo_disponible = data.tiempo_disponible
+    perfil.nivel_detalle = data.nivel_detalle
+
+    db.commit()
+
+    return {
+        "message": "Tiempo confirmado correctamente",
+        "visitante_id": visitante_id,
+        "tiempo_disponible": perfil.tiempo_disponible,
+        "nivel_detalle": perfil.nivel_detalle,
+        "siguiente_paso": "Generar itinerario personalizado"
+    }
 
 # ============================================
 # CREATE
