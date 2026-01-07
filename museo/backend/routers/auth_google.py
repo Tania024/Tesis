@@ -1,16 +1,19 @@
-# routers/auth_google.py
+# backend/routers/auth_google.py
 # Endpoints de autenticación con Google OAuth
 # Sistema Museo Pumapungo
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 import logging
+from urllib.parse import urlencode
 
 from database import get_db
 from models import Visitante, Perfil
 from services.google_auth_service import google_auth_service
 from services.interest_analyzer_service import interest_analyzer
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -25,6 +28,7 @@ async def google_login():
     Inicia el flujo de autenticación con Google
     """
     auth_url = google_auth_service.get_authorization_url()
+    logger.info("🔗 URL de autorización generada")
     return {
         "authorization_url": auth_url
     }
@@ -33,24 +37,31 @@ async def google_login():
 @router.get("/google/callback")
 async def google_callback(
     code: str = Query(..., description="Código OAuth de Google"),
-    perfil_id: int = Query(..., description="ID del perfil preconfigurado"),
     error: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-
     """
     Callback de Google OAuth
+    ✅ CORREGIDO: Eliminado parámetro perfil_id que causaba error 422
+    ✅ CORREGIDO: Agregada redirección al frontend
     """
 
     if error:
-        raise HTTPException(status_code=400, detail=f"Error Google OAuth: {error}")
+        logger.error(f"❌ Error OAuth de Google: {error}")
+        settings = get_settings()
+        frontend_url = settings.FRONTEND_URL or "http://localhost:5173"
+        return RedirectResponse(
+            url=f"{frontend_url}/login?error={error}"
+        )
 
     try:
         logger.info("🔐 Procesando callback de Google OAuth...")
+        logger.info(f"📝 Code recibido: {code[:20]}...")
 
         # 1. Intercambiar código por token
         token_data = await google_auth_service.exchange_code_for_token(code)
         access_token = token_data["access_token"]
+        logger.info("✅ Token obtenido exitosamente")
 
         # 2. Obtener datos del usuario
         user_data = await google_auth_service.extract_user_interests(access_token)
@@ -65,6 +76,7 @@ async def google_callback(
         family_name = profile.get("family_name", "")
 
         logger.info(f"📊 Usuario Google: {email}")
+        logger.info(f"📺 Canales YouTube: {len(youtube_data['channels'])}")
 
         # 3. Buscar o crear visitante (POR EMAIL)
         visitante = db.query(Visitante).filter(Visitante.email == email).first()
@@ -78,9 +90,9 @@ async def google_callback(
             )
             db.add(visitante)
             db.flush()
-            logger.info(f"✅ Nuevo visitante creado: {email}")
+            logger.info(f"✅ Nuevo visitante creado: {email} (ID: {visitante.id})")
         else:
-            logger.info(f"ℹ️ Visitante existente: {email}")
+            logger.info(f"ℹ️ Visitante existente: {email} (ID: {visitante.id})")
 
         # 4. Analizar intereses con IA
         datos_para_ia = {
@@ -91,6 +103,7 @@ async def google_callback(
             "locations_visited": []
         }
 
+        logger.info("🤖 Analizando intereses con IA...")
         analisis_ia = await interest_analyzer.analizar_perfil_completo(
             facebook_data=datos_para_ia,
             instagram_data=None,
@@ -101,47 +114,61 @@ async def google_callback(
             intereses_detectados_basicos + analisis_ia["intereses"]
         ))
 
+        logger.info(f"✅ Intereses detectados: {', '.join(intereses_finales)}")
+
         # 5. Crear o actualizar perfil
         perfil = db.query(Perfil).filter(
             Perfil.visitante_id == visitante.id
         ).first()
 
-        tiempo_usuario = None 
+        tiempo_usuario = analisis_ia.get("tiempo_sugerido", 90)
 
         if not perfil:
             perfil = Perfil(
                 visitante_id=visitante.id,
                 intereses=intereses_finales,
                 tiempo_disponible=tiempo_usuario,
-                nivel_detalle=analisis_ia["nivel_detalle_sugerido"],
+                nivel_detalle=analisis_ia.get("nivel_detalle_sugerido", "medio"),
                 incluir_descansos=True
             )
             db.add(perfil)
+            logger.info(f"✅ Perfil creado para visitante ID: {visitante.id}")
         else:
             perfil.intereses = intereses_finales
-            perfil.tiempo_disponible = analisis_ia["tiempo_sugerido"]
-            perfil.nivel_detalle = analisis_ia["nivel_detalle_sugerido"]
+            perfil.tiempo_disponible = tiempo_usuario
+            perfil.nivel_detalle = analisis_ia.get("nivel_detalle_sugerido", "medio")
+            logger.info(f"✅ Perfil actualizado para visitante ID: {visitante.id}")
 
         db.commit()
         db.refresh(visitante)
+        db.refresh(perfil)
 
         logger.info(f"✅ Autenticación Google completada: Visitante ID={visitante.id}")
 
-        return {
-            "message": "Autenticación exitosa con Google",
+        # 6. ✅ REDIRIGIR AL FRONTEND con los datos
+        settings = get_settings()
+        frontend_url = settings.FRONTEND_URL or "http://localhost:5173"
+        
+        # Preparar parámetros para el frontend
+        params = {
             "visitante_id": visitante.id,
             "nombre": f"{visitante.nombre} {visitante.apellido}".strip(),
             "email": visitante.email,
-            "intereses_detectados": intereses_finales,
-            "tiempo_sugerido": analisis_ia["tiempo_sugerido"],
-            "nota": "El tiempo es una sugerencia. El usuario puede modificarlo antes de generar el itinerario.",
-            "nivel_detalle": analisis_ia["nivel_detalle_sugerido"]
+            "success": "true"
         }
+        
+        redirect_url = f"{frontend_url}/login?{urlencode(params)}"
+        logger.info(f"↩️ Redirigiendo al frontend: {redirect_url}")
+        
+        return RedirectResponse(url=redirect_url)
 
     except Exception as e:
         db.rollback()
-        logger.error(f"❌ Error en callback Google: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error procesando autenticación: {str(e)}"
+        logger.error(f"❌ Error en callback Google: {e}", exc_info=True)
+        
+        # Redirigir al frontend con error
+        settings = get_settings()
+        frontend_url = settings.FRONTEND_URL or "http://localhost:5173"
+        return RedirectResponse(
+            url=f"{frontend_url}/login?error=auth_failed&detail={str(e)}"
         )

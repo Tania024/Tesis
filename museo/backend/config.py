@@ -67,7 +67,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
     REDIRECT_URI_BASE: str = "http://localhost:8000"
-    
+       # ✅ AGREGAR ESTA LÍNEA (IMPORTANTE)
+    FRONTEND_URL: str = "http://localhost:5173"
     # ============================================
     # CONFIGURACIÓN DE LOGGING
     # ============================================
