@@ -16,7 +16,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo y Nombre */}
           <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-            <span className="text-3xl">🏛️</span>
+            <img src="/public/images/logo-museo.png" alt="Museo Pumapungo" className="w-14 h-15 object-contain"/>
             <div>
               <h1 className="text-xl font-bold text-museo-brown">
                 Museo Pumapungo

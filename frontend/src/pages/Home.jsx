@@ -35,7 +35,7 @@ const Home = () => {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('https://pumapungo.gob.ec/assets/icono-COt22KoM.png')`,
+            backgroundImage: `url('/public/images/logopumapungo2.jpeg')`,
             // NOTA: Reemplaza esta URL con una imagen del Museo Pumapungo real
             // Por ejemplo: backgroundImage: `url('/museo-pumapungo-hero.jpg')`
           }}

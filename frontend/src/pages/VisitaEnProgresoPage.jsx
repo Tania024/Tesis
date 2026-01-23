@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { itinerariosAPI, detallesAPI } from '../services/api';
 import LoadingSpinner from '../components/Layout/LoadingSpinner';
+import EvaluacionModal from '../components/EvaluacionModal';
 
 const VisitaEnProgresoPage = () => {
   const { id } = useParams();
@@ -16,6 +17,7 @@ const VisitaEnProgresoPage = () => {
   const [areaActualIndex, setAreaActualIndex] = useState(0);
   const [tiempoInicio, setTiempoInicio] = useState(null);
   const [tiempoTranscurrido, setTiempoTranscurrido] = useState(0);
+  const [mostrarEvaluacion, setMostrarEvaluacion] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -93,84 +95,109 @@ const VisitaEnProgresoPage = () => {
     }
   };
 
-  const handleFinalizarVisita = async () => {
+  // 🔥 NUEVO: Función para volver a la sala anterior
+  const handleVolverSalaAnterior = async () => {
+    if (areaActualIndex <= 0) {
+      alert('Ya estás en la primera sala del recorrido');
+      return;
+    }
+
+    const anteriorIndex = areaActualIndex - 1;
+    const areaAnterior = detalles[anteriorIndex];
+
     try {
-      await itinerariosAPI.completarItinerario(id);
-      navigate(`/itinerario/${id}?completado=true`);
+      // Si el área anterior estaba saltada, reactivarla
+      if (areaAnterior.skip) {
+        await detallesAPI.reactivarArea(areaAnterior.id);
+        setDetalles(prev => prev.map(d => 
+          d.id === areaAnterior.id ? { ...d, skip: false, visitado: false } : d
+        ));
+      }
+      
+      // Si el área anterior estaba visitada, desmarcarla
+      if (areaAnterior.visitado) {
+        await detallesAPI.desmarcarArea(areaAnterior.id);
+        setDetalles(prev => prev.map(d => 
+          d.id === areaAnterior.id ? { ...d, visitado: false } : d
+        ));
+      }
+
+      // Volver al índice anterior
+      setAreaActualIndex(anteriorIndex);
     } catch (err) {
-      console.error('❌ Error:', err);
+      console.error('❌ Error volviendo a sala anterior:', err);
+      // Aunque falle la API, permitimos volver visualmente
+      setAreaActualIndex(anteriorIndex);
+    }
+  };
+
+  const handleMostrarEvaluacion = () => {
+    setMostrarEvaluacion(true);
+  };
+
+  const handleEnviarEvaluacion = async (evaluacion) => {
+    try {
+      // Guardar evaluación
+      await itinerariosAPI.guardarEvaluacion(parseInt(id), evaluacion);
+      
+      // Completar itinerario
+      await itinerariosAPI.actualizar(id, { estado: 'completado' });
+      
+      setMostrarEvaluacion(false);
+      
+      // Mensaje de agradecimiento
+      alert('¡Gracias por tu evaluación! Tu opinión nos ayuda a mejorar.');
+      
+      // Redirigir al detalle del itinerario
+      navigate(`/itinerarios/${id}`);
+    } catch (err) {
+      console.error('❌ Error guardando evaluación:', err);
+      alert('Hubo un error al guardar tu evaluación. Por favor, intenta de nuevo.');
     }
   };
 
   const formatearTiempo = (segundos) => {
-    const horas = Math.floor(segundos / 3600);
-    const minutos = Math.floor((segundos % 3600) / 60);
-    const segs = segundos % 60;
+    const h = Math.floor(segundos / 3600);
+    const m = Math.floor((segundos % 3600) / 60);
+    const s = segundos % 60;
     
-    if (horas > 0) {
-      return `${horas}h ${minutos}m`;
+    if (h > 0) {
+      return `${h}h ${m}m ${s}s`;
     }
-    return `${minutos}m ${segs}s`;
+    return `${m}m ${s}s`;
   };
 
   const obtenerInstruccionesNavegacion = (areaActual, areaSiguiente) => {
-    if (!areaActual || !areaSiguiente) return null;
+    if (!areaActual?.area || !areaSiguiente?.area) return [];
     
-    const pisoActual = areaActual.area?.piso || 1;
-    const pisoSiguiente = areaSiguiente.area?.piso || 1;
-    const zonaActual = areaActual.area?.zona || 'central';
-    const zonaSiguiente = areaSiguiente.area?.zona || 'central';
+    const pisoActual = areaActual.area.piso;
+    const pisoSiguiente = areaSiguiente.area.piso;
     
-    let instrucciones = [];
+    const instrucciones = [];
     
     if (pisoActual !== pisoSiguiente) {
       if (pisoSiguiente > pisoActual) {
-        instrucciones.push(`🔼 Sube al Piso ${pisoSiguiente}`);
+        instrucciones.push(`Sube al piso ${pisoSiguiente}`);
       } else {
-        instrucciones.push(`🔽 Baja al Piso ${pisoSiguiente}`);
+        instrucciones.push(`Baja al piso ${pisoSiguiente}`);
       }
-    } else {
-      instrucciones.push(`📍 Mismo piso (Piso ${pisoActual})`);
     }
     
-    if (zonaActual !== zonaSiguiente) {
-      const direcciones = {
-        'norte': '⬆️ Dirígete hacia el norte',
-        'sur': '⬇️ Dirígete hacia el sur',
-        'este': '➡️ Dirígete hacia el este',
-        'oeste': '⬅️ Dirígete hacia el oeste',
-        'central': '🎯 Dirígete al centro',
-        'exterior': '🌳 Sal al exterior'
-      };
-      instrucciones.push(direcciones[zonaSiguiente] || `Zona ${zonaSiguiente}`);
-    }
+    instrucciones.push(`Dirígete a la ${areaSiguiente.area.zona || 'zona indicada'}`);
+    instrucciones.push(`Busca "${areaSiguiente.area.nombre}"`);
     
     return instrucciones;
   };
 
-  const calcularProgreso = () => {
-    const visitadas = detalles.filter(d => d.visitado).length;
-    const total = detalles.length;
-    return total > 0 ? Math.round((visitadas / total) * 100) : 0;
-  };
+  if (loading) return <LoadingSpinner />;
 
-  if (loading) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <LoadingSpinner message="Cargando tu visita..." />
-      </div>
-    );
-  }
-
-  if (error || !itinerario) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <span className="text-6xl">❌</span>
-          <p className="text-xl text-gray-700 mt-4">{error || 'Itinerario no encontrado'}</p>
-          <button onClick={() => navigate('/mis-itinerarios')} className="btn-primary mt-4">
-            Volver
-          </button>
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-4xl mb-4">❌</div>
+          <h2 className="text-xl font-semibold text-red-800 mb-2">Error</h2>
+          <p className="text-red-600">{error}</p>
         </div>
       </div>
     );
@@ -178,13 +205,19 @@ const VisitaEnProgresoPage = () => {
 
   const areaActual = detalles[areaActualIndex];
   const areaSiguiente = detalles[areaActualIndex + 1];
-  const progreso = calcularProgreso();
+  
   const areasVisitadas = detalles.filter(d => d.visitado).length;
-  const todasVisitadas = areasVisitadas === detalles.length;
+  const areasOmitidas = detalles.filter(d => d.skip).length;
+  const areasPendientes = detalles.length - areasVisitadas - areasOmitidas;
+  const progreso = detalles.length > 0 
+    ? Math.round((areasVisitadas / detalles.length) * 100)
+    : 0;
+  
+  const todasVisitadas = areasVisitadas + areasOmitidas === detalles.length;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-8">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-museo-cream to-white">
+      {/* Header sticky */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -194,148 +227,171 @@ const VisitaEnProgresoPage = () => {
               </button>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Visita en Progreso</h1>
-                <p className="text-sm text-gray-600">{itinerario.titulo || 'Itinerario'}</p>
+                <p className="text-sm text-gray-600">{itinerario.titulo || 'Explorando la Historia de Cuenca'}</p>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="text-center">
+            <div className="flex items-center gap-6">
+              <div className="text-right">
                 <div className="text-2xl font-bold text-primary-600">
                   {formatearTiempo(tiempoTranscurrido)}
                 </div>
-                <div className="text-xs text-gray-500">Tiempo</div>
+                <div className="text-xs text-gray-600">Tiempo</div>
               </div>
-              <div className="text-center">
+              
+              <div className="text-right">
                 <div className="text-2xl font-bold text-green-600">{progreso}%</div>
-                <div className="text-xs text-gray-500">Progreso</div>
+                <div className="text-xs text-gray-600">Progreso</div>
               </div>
             </div>
           </div>
           
-          <div className="mt-4 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-primary-500 to-green-500 transition-all duration-500" style={{ width: `${progreso}%` }} />
+          <div className="mt-3">
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-green-500 to-blue-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${progreso}%` }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        <div className="grid lg:grid-cols-3 gap-6">
+      {/* Contenido principal */}
+      <div className="container mx-auto px-4 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Columna izquierda: Área actual */}
           <div className="lg:col-span-2 space-y-6">
-            {!todasVisitadas && areaActual ? (
-              <div className="card">
-                <div className="mb-6">
-                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-2">
-                    📍 Estás aquí
-                  </span>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                    {areaActual.area?.nombre || 'Área'}
-                  </h2>
-                  <p className="text-gray-600">
-                    Área {areaActualIndex + 1} de {detalles.length} • {areaActual.tiempo_sugerido || 20} minutos
-                  </p>
-                </div>
-
-                <div className="flex gap-3 mb-6">
-                  <button onClick={() => handleMarcarVisitada(areaActual.id)} className="flex-1 bg-green-600 text-white px-6 py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors">
-                    ✓ Marcar como Visitada
-                  </button>
-                  <button onClick={() => handleSaltarArea(areaActual.id)} className="bg-gray-200 text-gray-700 px-6 py-4 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
-                    Saltar →
-                  </button>
-                </div>
-
-                <div className="border-t-2 border-gray-200 pt-6 space-y-8">
-                  {/* Introducción */}
-                  {areaActual.introduccion && (
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-gray-700 leading-relaxed">
-                        {areaActual.introduccion}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* 📖 Historia y Contexto */}
-                  {areaActual.historia_contextual && (
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span>📖</span>
-                        <span>Historia y Contexto</span>
-                      </h3>
-                      <div className="prose prose-gray max-w-none">
-                        <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                          {areaActual.historia_contextual}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 💡 ¿Sabías que...? */}
-                  {areaActual.datos_curiosos && areaActual.datos_curiosos.length > 0 && (
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span>💡</span>
-                        <span>¿Sabías que...?</span>
-                      </h3>
-                      <div className="bg-blue-50 rounded-lg p-6 space-y-4">
-                        {areaActual.datos_curiosos.map((dato, idx) => (
-                          <div key={idx} className="flex items-start gap-3">
-                            <span className="flex-shrink-0 text-2xl">🔹</span>
-                            <p className="text-gray-800 leading-relaxed">{dato}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 👀 Qué Observar */}
-                  {areaActual.que_observar && areaActual.que_observar.length > 0 && (
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span>👀</span>
-                        <span>Qué Observar</span>
-                      </h3>
-                      <div className="bg-purple-50 rounded-lg p-6 space-y-4">
-                        {areaActual.que_observar.map((observacion, idx) => (
-                          <div key={idx} className="flex items-start gap-3">
-                            <span className="flex-shrink-0 w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                              {idx + 1}
+            {areaActual && !todasVisitadas ? (
+              <div className="card border-2 border-primary-200">
+                {/* Encabezado del área */}
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-full text-xl font-bold shadow-lg">
+                        {areaActualIndex + 1}
+                      </span>
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          {areaActual.area?.nombre || 'Área del museo'}
+                        </h2>
+                        <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
+                          <span className="flex items-center gap-1">
+                            <span>⏱️</span>
+                            <span>Tiempo sugerido: {areaActual.tiempo_sugerido || 20} minutos</span>
+                          </span>
+                          {areaActual.area?.piso && (
+                            <span className="flex items-center gap-1">
+                              <span>📍</span>
+                              <span>Piso {areaActual.area.piso}</span>
                             </span>
-                            <p className="text-gray-800 leading-relaxed">{observacion}</p>
-                          </div>
-                        ))}
+                          )}
+                        </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Introducción */}
+                {areaActual.introduccion && (
+                  <div className="mb-6 p-4 bg-primary-50 rounded-lg border border-primary-100">
+                    <p className="text-gray-800 leading-relaxed">{areaActual.introduccion}</p>
+                  </div>
+                )}
+
+                {/* Historia Contextual */}
+                {areaActual.historia_contextual && (
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                      <span>📖</span>
+                      <span>Historia y Contexto:</span>
+                    </h3>
+                    <p className="text-blue-800 leading-relaxed">{areaActual.historia_contextual}</p>
+                  </div>
+                )}
+
+                {/* Datos Curiosos */}
+                {areaActual.datos_curiosos && areaActual.datos_curiosos.length > 0 && (
+                  <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <h3 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
+                      <span>✨</span>
+                      <span>Datos Curiosos:</span>
+                    </h3>
+                    <div className="space-y-2">
+                      {areaActual.datos_curiosos.map((dato, idx) => (
+                        <div key={idx} className="flex items-start gap-3 text-yellow-800">
+                          <span className="flex-shrink-0 w-6 h-6 bg-yellow-200 rounded-full flex items-center justify-center text-xs font-bold">
+                            {idx + 1}
+                          </span>
+                          <p className="flex-1">{dato}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Qué Observar */}
+                {areaActual.que_observar && areaActual.que_observar.length > 0 && (
+                  <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                      <span>👀</span>
+                      <span>Qué Observar:</span>
+                    </h3>
+                    <div className="space-y-2">
+                      {areaActual.que_observar.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-3 text-purple-800">
+                          <span className="flex-shrink-0 w-6 h-6 bg-purple-200 rounded-full flex items-center justify-center text-xs font-bold">
+                            {idx + 1}
+                          </span>
+                          <p className="flex-1">{item}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recomendación */}
+                {areaActual.recomendacion && (
+                  <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                    <h3 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+                      <span>💡</span>
+                      <span>Recomendación:</span>
+                    </h3>
+                    <p className="text-green-800 leading-relaxed">{areaActual.recomendacion}</p>
+                  </div>
+                )}
+
+                {/* 🔥 NUEVA SECCIÓN: Botones de acción con VOLVER */}
+                <div className="space-y-3">
+                  {/* Fila 1: Botón Volver a Sala Anterior (solo si NO es la primera) */}
+                  {areaActualIndex > 0 && (
+                    <button
+                      onClick={handleVolverSalaAnterior}
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <span>←</span>
+                      <span>Volver a Sala Anterior</span>
+                    </button>
                   )}
 
-                  {/* Puntos clave (legacy) */}
-                  {areaActual.puntos_clave && areaActual.puntos_clave.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>💡</span>
-                        <span>Puntos clave:</span>
-                      </h3>
-                      <ul className="space-y-2">
-                        {areaActual.puntos_clave.map((punto, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-primary-500 mt-1">•</span>
-                            <span className="text-gray-700">{punto}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Recomendación */}
-                  {areaActual.recomendacion && (
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                      <h3 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
-                        <span>✨</span>
-                        <span>Recomendación:</span>
-                      </h3>
-                      <p className="text-green-800 leading-relaxed">{areaActual.recomendacion}</p>
-                    </div>
-                  )}
+                  {/* Fila 2: Botones Marcar y Saltar */}
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => handleMarcarVisitada(areaActual.id)}
+                      className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-700 hover:to-blue-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <span>✅</span>
+                      <span>Marcar como Visitada</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleSaltarArea(areaActual.id)}
+                      className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      <span>⏭️</span>
+                      <span>Saltar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : todasVisitadas ? (
@@ -345,13 +401,17 @@ const VisitaEnProgresoPage = () => {
                 <p className="text-lg text-primary-600 font-semibold mb-6">
                   Tiempo total: {formatearTiempo(tiempoTranscurrido)}
                 </p>
-                <button onClick={handleFinalizarVisita} className="btn-primary inline-flex items-center gap-2 text-lg">
+                <button 
+                  onClick={handleMostrarEvaluacion} 
+                  className="btn-primary inline-flex items-center gap-2 text-lg"
+                >
                   <span>🏁</span>
                   <span>Finalizar Visita</span>
                 </button>
               </div>
             ) : null}
 
+            {/* Siguiente parada */}
             {!todasVisitadas && areaSiguiente && (
               <div className="card bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200">
                 <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -387,6 +447,7 @@ const VisitaEnProgresoPage = () => {
 
           {/* Columna derecha: Plano y Recorrido */}
           <div className="space-y-6">
+            {/* Plano del Museo */}
             <div className="card">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <span>🗺️</span>
@@ -409,15 +470,14 @@ const VisitaEnProgresoPage = () => {
                             key={detalle.id}
                             className={`p-2 rounded text-xs font-medium text-center ${
                               detalle.id === areaActual?.id
-                                ? 'bg-blue-500 text-white animate-pulse'
+                                ? 'bg-primary-500 text-white'
                                 : detalle.visitado
                                 ? 'bg-green-100 text-green-700'
                                 : detalle.skip
-                                ? 'bg-gray-100 text-gray-500'
-                                : 'bg-gray-50 text-gray-700'
+                                ? 'bg-gray-100 text-gray-500 line-through'
+                                : 'bg-gray-50 text-gray-600'
                             }`}
                           >
-                            {detalle.id === areaActual?.id && '📍 '}
                             {detalle.orden}. {detalle.area?.nombre?.substring(0, 15)}...
                           </div>
                         ))}
@@ -428,63 +488,64 @@ const VisitaEnProgresoPage = () => {
               </div>
             </div>
 
+            {/* Tu Recorrido */}
             <div className="card">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <span>📋</span>
+                <span>📝</span>
                 <span>Tu Recorrido</span>
               </h3>
               
-              <div className="space-y-3">
-                {detalles.map((detalle, idx) => (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {detalles.map((detalle, index) => (
                   <div
                     key={detalle.id}
                     className={`p-3 rounded-lg border-2 transition-all ${
                       detalle.id === areaActual?.id
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'bg-primary-50 border-primary-500 shadow-md'
                         : detalle.visitado
-                        ? 'border-green-300 bg-green-50'
+                        ? 'bg-green-50 border-green-200'
                         : detalle.skip
-                        ? 'border-gray-200 bg-gray-50 opacity-60'
-                        : 'border-gray-200'
+                        ? 'bg-gray-50 border-gray-200 opacity-60'
+                        : 'bg-white border-gray-200'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0">
-                        {detalle.visitado ? (
-                          <span className="text-2xl">✅</span>
-                        ) : detalle.skip ? (
-                          <span className="text-2xl">⏭️</span>
-                        ) : detalle.id === areaActual?.id ? (
-                          <span className="text-2xl animate-bounce">📍</span>
-                        ) : (
-                          <span className="text-2xl">⏸️</span>
-                        )}
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                        detalle.id === areaActual?.id
+                          ? 'bg-primary-500 text-white'
+                          : detalle.visitado
+                          ? 'bg-green-500 text-white'
+                          : detalle.skip
+                          ? 'bg-gray-300 text-gray-600'
+                          : 'bg-gray-200 text-gray-700'
+                      }`}>
+                        {detalle.visitado ? '✓' : detalle.skip ? '⏭' : detalle.orden}
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 truncate">
-                          {idx + 1}. {detalle.area?.nombre || 'Área'}
+                      <div className="flex-1">
+                        <div className="font-medium text-sm text-gray-900">
+                          {detalle.area?.nombre || 'Área del museo'}
                         </div>
-                        <div className="text-sm text-gray-600">
-                          ⏱️ {detalle.tiempo_sugerido || 20} min • Piso {detalle.area?.piso || 1}
+                        <div className="text-xs text-gray-600 mt-1 flex items-center gap-2">
+                          <span>⏱️ {detalle.tiempo_sugerido || 20} min</span>
+                          <span>•</span>
+                          <span>Piso {detalle.area?.piso || 1}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-
+              
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="text-center p-2 bg-green-50 rounded">
-                    <div className="font-bold text-green-700">{areasVisitadas}</div>
-                    <div className="text-gray-600">Visitadas</div>
+                    <div className="text-2xl font-bold text-green-600">{areasVisitadas}</div>
+                    <div className="text-gray-600 text-xs">Visitadas</div>
                   </div>
                   <div className="text-center p-2 bg-blue-50 rounded">
-                    <div className="font-bold text-blue-700">
-                      {detalles.length - areasVisitadas}
-                    </div>
-                    <div className="text-gray-600">Pendientes</div>
+                    <div className="text-2xl font-bold text-blue-600">{areasPendientes}</div>
+                    <div className="text-gray-600 text-xs">Pendientes</div>
                   </div>
                 </div>
               </div>
@@ -492,6 +553,16 @@ const VisitaEnProgresoPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Evaluación */}
+      {mostrarEvaluacion && (
+        <EvaluacionModal
+  isOpen={mostrarEvaluacion}
+  onClose={() => setMostrarEvaluacion(false)}
+  onSubmit={handleEnviarEvaluacion}
+  itinerarioId={parseInt(id)}
+/>
+      )}
     </div>
   );
 };

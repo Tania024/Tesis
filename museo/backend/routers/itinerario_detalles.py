@@ -197,3 +197,60 @@ async def obtener_progreso(itinerario_id: int, db: Session = Depends(get_db)):
         "pendientes": pendientes,
         "porcentaje_completado": round(porcentaje, 1)
     }
+
+
+
+@router.patch("/{detalle_id}/reactivar", response_model=ItinerarioDetalleResponse)
+def reactivar_area(
+    detalle_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Reactivar un área que fue saltada (quitar el skip)
+    """
+    detalle = db.query(ItinerarioDetalle).filter(
+        ItinerarioDetalle.id == detalle_id
+    ).first()
+    
+    if not detalle:
+        raise HTTPException(status_code=404, detail="Detalle no encontrado")
+    
+    # Reactivar el área (quitar skip y visitado)
+    detalle.skip = False
+    detalle.visitado = False
+    detalle.hora_fin = None
+    
+    db.commit()
+    db.refresh(detalle)
+    
+    logger.info(f"✅ Área {detalle_id} reactivada")
+    
+    return detalle
+
+
+@router.patch("/{detalle_id}/desmarcar", response_model=ItinerarioDetalleResponse)
+def desmarcar_area(
+    detalle_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Desmarcar un área como visitada (volver a estado pendiente)
+    """
+    detalle = db.query(ItinerarioDetalle).filter(
+        ItinerarioDetalle.id == detalle_id
+    ).first()
+    
+    if not detalle:
+        raise HTTPException(status_code=404, detail="Detalle no encontrado")
+    
+    # Desmarcar como visitado
+    detalle.visitado = False
+    detalle.hora_fin = None
+    detalle.tiempo_real = None
+    
+    db.commit()
+    db.refresh(detalle)
+    
+    logger.info(f"✅ Área {detalle_id} desmarcada")
+    
+    return detalle

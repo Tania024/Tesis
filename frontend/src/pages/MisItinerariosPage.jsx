@@ -151,14 +151,14 @@ const MisItinerariosPage = () => {
                           <span>✅</span> Completado
                         </span>
                       )}
-                      {itinerario.estado === 'en_progreso' && (
+                      {itinerario.estado === 'activo' && (
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                           <span>⏳</span> En Progreso
                         </span>
                       )}
-                      {itinerario.estado === 'pendiente' && (
+                      {itinerario.estado === 'generado' && (
                         <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
-                          <span>📋</span> Pendiente
+                          <span>📋</span> Generado
                         </span>
                       )}
                     </div>

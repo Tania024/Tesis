@@ -278,6 +278,57 @@ class HistorialVisitaResponse(HistorialVisitaBase):
     class Config:
         from_attributes = True
 
+
+
+
+# schemas/evaluacion.py
+# 🔥 NUEVO: Schemas para evaluaciones
+
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
+
+class EvaluacionCreate(BaseModel):
+    """Schema para crear evaluación"""
+    itinerario_id: int
+    calificacion_general: int = Field(..., ge=1, le=5, description="Calificación de 1 a 5")
+    personalizado: bool
+    buenas_decisiones: bool
+    acompaniamiento: bool
+    comprension: bool
+    relevante: bool
+    usaria_nuevamente: bool
+    comentarios: Optional[str] = None
+
+class EvaluacionResponse(BaseModel):
+    """Schema para respuesta de evaluación"""
+    id: int
+    itinerario_id: int
+    calificacion_general: int
+    personalizado: bool
+    buenas_decisiones: bool
+    acompaniamiento: bool
+    comprension: bool
+    relevante: bool
+    usaria_nuevamente: bool
+    comentarios: Optional[str]
+    fecha_creacion: datetime
+
+    class Config:
+        from_attributes = True
+
+class EstadisticasEvaluacion(BaseModel):
+    """Estadísticas agregadas de evaluaciones"""
+    total_evaluaciones: int
+    calificacion_promedio: float
+    porcentaje_personalizado: float
+    porcentaje_buenas_decisiones: float
+    porcentaje_acompaniamiento: float
+    porcentaje_comprension: float
+    porcentaje_relevante: float
+    porcentaje_usaria_nuevamente: float
+    satisfaccion_general: str  # "Excelente", "Buena", "Regular", etc.
+
 # ============================================
 # SCHEMAS COMPUESTOS
 # ============================================

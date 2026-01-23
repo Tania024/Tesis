@@ -26,8 +26,8 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold mb-4">Desarrollado por</h3>
             <p className="text-gray-400 text-sm">
-              Tania Lojano<br />
               Noé Leandro Ayavaca Guarango<br />
+              Tania Lilibeth Lojano Guzmán<br />
               Tutor: PhD. Gustavo Omar Bravo Quezada
             </p>
           </div>
@@ -35,7 +35,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 mt-8 pt-6 text-center text-gray-400 text-sm">
           <p>&copy; 2025 Sistema Museo Pumapungo. Todos los derechos reservados.</p>
-          <p className="mt-2">Potenciado por IA Generativa (DeepSeek-R1:7b)</p>
+          <p className="mt-2">Potenciado por IA Generativa </p>
         </div>
       </div>
     </footer>

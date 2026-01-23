@@ -198,6 +198,9 @@ export const itinerariosAPI = {
    const response = await api.get('/itinerarios/estadisticas');
     return response.data;
   },
+  guardarEvaluacion: async (itinerarioId, evaluacion) => {
+    return await evaluacionesAPI.guardarEvaluacion(itinerarioId, evaluacion);
+  }
 }
 
 // ============================================
@@ -249,6 +252,28 @@ export const detallesAPI = {
     const response = await api.get(`/detalles/itinerario/${itinerarioId}/progreso`);
     return response.data;
   },
+  
+  reactivarArea: async (detalleId) => {
+    try {
+      const response = await api.patch(`/detalles/${detalleId}/reactivar`);
+      console.log('✅ Área reactivada:', detalleId);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error reactivando área:', error);
+      throw error;
+    }
+  },
+
+  desmarcarArea: async (detalleId) => {
+    try {
+      const response = await api.patch(`/detalles/${detalleId}/desmarcar`);
+      console.log('✅ Área desmarcada:', detalleId);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error desmarcando área:', error);
+      throw error;
+    }
+  }
 };
 
 // ============================================
@@ -297,6 +322,35 @@ export const historialAPI = {
     const response = await api.get('/historial/estadisticas/horas-pico');
     return response.data;
   },
+};
+
+
+// ============================================
+// API DE EVALUACIONES
+// ============================================
+
+export const evaluacionesAPI = {
+  guardarEvaluacion: async (itinerarioId, evaluacion) => {
+    try {
+      const response = await api.post('/evaluaciones/', {
+        itinerario_id: itinerarioId,
+        calificacion_general: evaluacion.calificacion_general,
+        personalizado: evaluacion.personalizado,
+        buenas_decisiones: evaluacion.buenas_decisiones,
+        acompaniamiento: evaluacion.acompaniamiento,
+        comprension: evaluacion.comprension,
+        relevante: evaluacion.relevante,
+        usaria_nuevamente: evaluacion.usaria_nuevamente,
+        comentarios: evaluacion.comentarios || null
+      });
+      
+      console.log('✅ Evaluación guardada:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error guardando evaluación:', error.response?.data || error);
+      throw error;
+    }
+  }
 };
 
 // Exportar instancia de axios por defecto

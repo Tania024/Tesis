@@ -7,7 +7,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import datetime
+from datetime import datetime, timezone
 
 from database import Base
 
@@ -175,6 +175,7 @@ class Itinerario(Base):
     perfil = relationship("Perfil", back_populates="itinerarios")
     detalles = relationship("ItinerarioDetalle", back_populates="itinerario", cascade="all, delete-orphan")
     historial = relationship("HistorialVisita", back_populates="itinerario")
+    evaluacion = relationship("Evaluacion", back_populates="itinerario", uselist=False, cascade="all, delete-orphan")
     
     # Constraints
     __table_args__ = (
@@ -276,3 +277,40 @@ class HistorialVisita(Base):
         return f"<Visita {self.fecha_visita} - Visitante {self.visitante_id}>"
     
 
+# ============================================
+# MODELO: EXPERIENCIA
+# ============================================
+
+class Evaluacion(Base):
+    """
+    Evaluación de la experiencia del visitante al finalizar el itinerario
+    """
+    __tablename__ = "evaluaciones"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Relación con itinerario
+    itinerario_id = Column(Integer, ForeignKey("itinerarios.id"), nullable=False)
+    
+    # Calificación general (1-5)
+    calificacion_general = Column(Integer, nullable=False)  # 1=😡, 2=😕, 3=😐, 4=😊, 5=🤩
+    
+    # Preguntas específicas (True/False = 👍/👎)
+    personalizado = Column(Boolean, nullable=False)
+    buenas_decisiones = Column(Boolean, nullable=False)
+    acompaniamiento = Column(Boolean, nullable=False)
+    comprension = Column(Boolean, nullable=False)
+    relevante = Column(Boolean, nullable=False)
+    usaria_nuevamente = Column(Boolean, nullable=False)
+    
+    # Comentarios opcionales
+    comentarios = Column(Text, nullable=True)
+    
+    # Metadata
+    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+    
+    # Relación
+    itinerario = relationship("Itinerario", back_populates="evaluacion")
+
+    def __repr__(self):
+        return f"<Evaluacion {self.id} - Itinerario {self.itinerario_id} - {self.calificacion_general}⭐>"

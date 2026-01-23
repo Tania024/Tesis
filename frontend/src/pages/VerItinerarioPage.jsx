@@ -57,16 +57,17 @@ const VerItinerarioPage = () => {
   };
 
   const formatearFecha = (fecha) => {
-    // ✅ CORREGIDO: Usar timezone de Ecuador (America/Guayaquil = UTC-5)
-    return new Date(fecha).toLocaleDateString('es-EC', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Guayaquil'  // Zona horaria de Ecuador
-    });
-  };
+  return new Date(fecha).toLocaleString('es-EC', {
+    timeZone: 'America/Guayaquil',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
+
 
   if (loading) {
     return (

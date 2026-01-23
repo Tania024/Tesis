@@ -1,19 +1,20 @@
 // src/pages/AdminPage.jsx
-// ✅ CORREGIDO: Rutas de API actualizadas
+// ✅ CON ESTADÍSTICAS DE EVALUACIONES
 
 import { useState, useEffect } from 'react';
-import { visitantesAPI, itinerariosAPI, historialAPI } from '../services/api';
+import { visitantesAPI, itinerariosAPI, historialAPI, evaluacionesAPI } from '../services/api';
 import LoadingSpinner from '../components/Layout/LoadingSpinner';
 
 const AdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [periodo, setPeriodo] = useState('hoy'); // 'hoy', 'semana', 'mes'
+  const [periodo, setPeriodo] = useState('hoy');
   
   // Estados para las estadísticas
   const [estadisticasVisitantes, setEstadisticasVisitantes] = useState(null);
   const [estadisticasItinerarios, setEstadisticasItinerarios] = useState(null);
   const [estadisticasHoy, setEstadisticasHoy] = useState(null);
+  const [estadisticasEvaluaciones, setEstadisticasEvaluaciones] = useState(null); // 🔥 NUEVO
   const [horasPico, setHorasPico] = useState([]);
   const [visitantesRecientes, setVisitantesRecientes] = useState([]);
 
@@ -26,17 +27,18 @@ const AdminPage = () => {
       setLoading(true);
       setError(null);
 
-      // ✅ CAMBIO: Usar estadisticas() en lugar de endpoints específicos
       const [
         visitantesStats,
         itinerariosStats,
         hoyStats,
+        evaluacionesStats, // 🔥 NUEVO
         pico,
         visitantes
       ] = await Promise.all([
-        visitantesAPI.estadisticas(),           // ✅ CORREGIDO
-        itinerariosAPI.estadisticas(),          // ✅ CORREGIDO
+        visitantesAPI.estadisticas(),
+        itinerariosAPI.estadisticas(),
         historialAPI.estadisticasHoy(),
+        evaluacionesAPI.obtenerEstadisticas(), // 🔥 NUEVO
         historialAPI.horasPico(),
         visitantesAPI.listar({ limit: 10, ordenar: '-fecha_registro' })
       ]);
@@ -44,6 +46,7 @@ const AdminPage = () => {
       setEstadisticasVisitantes(visitantesStats);
       setEstadisticasItinerarios(itinerariosStats);
       setEstadisticasHoy(hoyStats);
+      setEstadisticasEvaluaciones(evaluacionesStats); // 🔥 NUEVO
       setHorasPico(pico);
       setVisitantesRecientes(visitantes.visitantes || []);
     } catch (err) {
@@ -71,6 +74,23 @@ const AdminPage = () => {
       'internacional': 'Internacional'
     };
     return tipos[tipo] || tipo;
+  };
+
+  // 🔥 NUEVO: Obtener emoji según calificación
+  const obtenerEmojiCalificacion = (calificacion) => {
+    if (calificacion >= 4.5) return '🤩';
+    if (calificacion >= 3.5) return '😊';
+    if (calificacion >= 2.5) return '😐';
+    if (calificacion >= 1.5) return '😕';
+    return '😡';
+  };
+
+  // 🔥 NUEVO: Obtener color según porcentaje
+  const obtenerColorPorcentaje = (porcentaje) => {
+    if (porcentaje >= 80) return 'bg-green-500';
+    if (porcentaje >= 60) return 'bg-blue-500';
+    if (porcentaje >= 40) return 'bg-yellow-500';
+    return 'bg-red-500';
   };
 
   if (loading) return <LoadingSpinner />;
@@ -153,22 +173,176 @@ const AdminPage = () => {
             <p className="text-sm text-gray-600">Itinerarios con IA</p>
           </div>
 
-          {/* Puntuación Promedio */}
+          {/* 🔥 MODIFICADO: Satisfacción Promedio CON EVALUACIONES */}
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">⭐</span>
+              <span className="text-3xl">
+                {estadisticasEvaluaciones?.calificacion_promedio 
+                  ? obtenerEmojiCalificacion(estadisticasEvaluaciones.calificacion_promedio)
+                  : '⭐'}
+              </span>
               <span className="text-sm text-gray-500">Rating</span>
             </div>
             <h3 className="text-3xl font-bold text-gray-900 mb-1">
-              {estadisticasItinerarios?.puntuacion_promedio 
-                ? estadisticasItinerarios.puntuacion_promedio.toFixed(1)
+              {estadisticasEvaluaciones?.calificacion_promedio 
+                ? estadisticasEvaluaciones.calificacion_promedio.toFixed(1)
                 : 'N/A'}
             </h3>
-            <p className="text-sm text-gray-600">Satisfacción Promedio</p>
+            <p className="text-sm text-gray-600">
+              {estadisticasEvaluaciones?.satisfaccion_general || 'Satisfacción Promedio'}
+            </p>
+            {estadisticasEvaluaciones?.total_evaluaciones > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {estadisticasEvaluaciones.total_evaluaciones} evaluaciones
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Fila 2: Estadísticas Detalladas */}
+        {/* 🔥 NUEVA SECCIÓN: Estadísticas Detalladas de Evaluaciones */}
+        {estadisticasEvaluaciones && estadisticasEvaluaciones.total_evaluaciones > 0 && (
+          <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span>📋</span>
+              Evaluación de Experiencia del Visitante
+            </h2>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Columna 1: Métricas Principales */}
+              <div className="space-y-4">
+                <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border-2 border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-700">Calificación General</span>
+                    <span className="text-4xl">
+                      {obtenerEmojiCalificacion(estadisticasEvaluaciones.calificacion_promedio)}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold text-purple-600">
+                      {estadisticasEvaluaciones.calificacion_promedio.toFixed(1)}
+                    </span>
+                    <span className="text-2xl text-gray-500">/ 5.0</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {estadisticasEvaluaciones.satisfaccion_general}
+                  </p>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-700">Total de Evaluaciones</span>
+                    <span className="text-2xl font-bold text-gray-900">
+                      {estadisticasEvaluaciones.total_evaluaciones}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Columna 2: Preguntas Específicas */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900 mb-3">Respuestas Positivas</h3>
+                
+                {/* Personalización */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-700">¿Fue personalizado?</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {estadisticasEvaluaciones.porcentaje_personalizado.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_personalizado)}`}
+                      style={{ width: `${estadisticasEvaluaciones.porcentaje_personalizado}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Buenas Decisiones */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-700">¿Buenas decisiones de áreas?</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {estadisticasEvaluaciones.porcentaje_buenas_decisiones.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_buenas_decisiones)}`}
+                      style={{ width: `${estadisticasEvaluaciones.porcentaje_buenas_decisiones}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Acompañamiento */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-700">¿Guía inteligente?</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {estadisticasEvaluaciones.porcentaje_acompaniamiento.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_acompaniamiento)}`}
+                      style={{ width: `${estadisticasEvaluaciones.porcentaje_acompaniamiento}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Comprensión */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-700">¿Mejoró comprensión?</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {estadisticasEvaluaciones.porcentaje_comprension.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_comprension)}`}
+                      style={{ width: `${estadisticasEvaluaciones.porcentaje_comprension}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Relevancia */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-700">¿Contenido relevante?</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {estadisticasEvaluaciones.porcentaje_relevante.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_relevante)}`}
+                      style={{ width: `${estadisticasEvaluaciones.porcentaje_relevante}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Usaría Nuevamente */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-700">¿Usaría nuevamente?</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {estadisticasEvaluaciones.porcentaje_usaria_nuevamente.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_usaria_nuevamente)}`}
+                      style={{ width: `${estadisticasEvaluaciones.porcentaje_usaria_nuevamente}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Resto del código igual... (Distribución de Visitantes, Horas Pico, etc.) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Distribución por Tipo de Visitante */}
           <div className="bg-white rounded-xl shadow-md p-6">
@@ -192,9 +366,9 @@ const AdminPage = () => {
                           {cantidad} ({porcentaje}%)
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-primary-500 h-2 rounded-full transition-all duration-300"
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all duration-500"
                           style={{ width: `${porcentaje}%` }}
                         />
                       </div>
@@ -204,53 +378,62 @@ const AdminPage = () => {
               </div>
             ) : (
               <p className="text-gray-500 text-center py-8">
-                No hay datos disponibles
+                No hay datos de distribución disponibles
               </p>
             )}
           </div>
 
-          {/* Estadísticas de Itinerarios */}
+          {/* Estados de Itinerarios */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span>📋</span>
-              Estadísticas de Itinerarios
+              <span>📈</span>
+              Estado de Itinerarios
             </h2>
-            {estadisticasItinerarios ? (
+            {estadisticasItinerarios?.itinerarios_por_estado && Object.keys(estadisticasItinerarios.itinerarios_por_estado).length > 0 ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <span className="text-gray-700">Total Generados</span>
-                  <span className="text-xl font-bold text-blue-600">
-                    {estadisticasItinerarios.total_itinerarios || 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <span className="text-gray-700">Completados</span>
-                  <span className="text-xl font-bold text-green-600">
-                    {estadisticasItinerarios.completados || 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                  <span className="text-gray-700">En Progreso</span>
-                  <span className="text-xl font-bold text-purple-600">
-                    {estadisticasItinerarios.en_progreso || 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                  <span className="text-gray-700">Duración Promedio</span>
-                  <span className="text-xl font-bold text-yellow-600">
-                    {estadisticasItinerarios.duracion_promedio_minutos || 0} min
-                  </span>
-                </div>
+                {Object.entries(estadisticasItinerarios.itinerarios_por_estado).map(([estado, cantidad]) => {
+                  const total = estadisticasItinerarios.total_itinerarios;
+                  const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : 0;
+                  
+                  const estadoConfig = {
+                    'generado': { color: 'from-blue-500 to-blue-600', emoji: '📝', label: 'Generados' },
+                    'activo': { color: 'from-green-500 to-green-600', emoji: '✅', label: 'Activos' },
+                    'completado': { color: 'from-purple-500 to-purple-600', emoji: '🎉', label: 'Completados' },
+                    'cancelado': { color: 'from-red-500 to-red-600', emoji: '❌', label: 'Cancelados' }
+                  };
+                  
+                  const config = estadoConfig[estado] || { color: 'from-gray-500 to-gray-600', emoji: '📋', label: estado };
+                  
+                  return (
+                    <div key={estado}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-gray-700 flex items-center gap-2">
+                          <span>{config.emoji}</span>
+                          {config.label}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {cantidad} ({porcentaje}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className={`bg-gradient-to-r ${config.color} h-3 rounded-full transition-all duration-500`}
+                          style={{ width: `${porcentaje}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-gray-500 text-center py-8">
-                No hay datos disponibles
+                No hay datos de estado de itinerarios disponibles
               </p>
             )}
           </div>
         </div>
 
-        {/* Fila 3: Horas Pico y Actividad */}
+        {/* Fila 3: Horas Pico y Actividad de Hoy */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Horas Pico */}
           <div className="bg-white rounded-xl shadow-md p-6">
@@ -424,8 +607,8 @@ const AdminPage = () => {
               </div>
               <div>
                 <div className="text-3xl font-bold mb-1">
-                  {estadisticasItinerarios?.puntuacion_promedio 
-                    ? `${estadisticasItinerarios.puntuacion_promedio.toFixed(1)}⭐`
+                  {estadisticasEvaluaciones?.calificacion_promedio 
+                    ? `${estadisticasEvaluaciones.calificacion_promedio.toFixed(1)}⭐`
                     : 'N/A'}
                 </div>
                 <div className="text-sm text-museo-cream">
