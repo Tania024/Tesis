@@ -13,7 +13,7 @@ const Home = () => {
     {
       icon: '🤖',
       title: 'IA Generativa',
-      description: 'Itinerarios personalizados generados por DeepSeek-R1:7b según tus intereses reales'
+      description: 'Itinerarios personalizados generados por qwen2.5:7b según tus intereses reales'
     },
     {
       icon: '📺',
@@ -27,6 +27,13 @@ const Home = () => {
     }
   ];
 
+  // 🔥 NUEVO: Horarios del museo
+  const horarios = [
+    { dia: 'Lunes', horario: 'Cerrado', icon: '🚫', color: 'text-red-600', bgColor: 'bg-red-50' },
+    { dia: 'Martes - Viernes', horario: '8:00 - 17:00', icon: '🏛️', color: 'text-green-600', bgColor: 'bg-green-50' },
+    { dia: 'Sábado - Domingo', horario: '10:00 - 16:00', icon: '🏛️', color: 'text-blue-600', bgColor: 'bg-blue-50' },
+  ];
+
   return (
     <div className="min-h-screen">
       {/* HERO SECTION CON IMAGEN DE FONDO - ESTILO MUSEO OFICIAL */}
@@ -36,8 +43,6 @@ const Home = () => {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `url('/public/images/logopumapungo2.jpeg')`,
-            // NOTA: Reemplaza esta URL con una imagen del Museo Pumapungo real
-            // Por ejemplo: backgroundImage: `url('/museo-pumapungo-hero.jpg')`
           }}
         >
           {/* Overlay oscuro para mejorar legibilidad */}
@@ -185,6 +190,145 @@ const Home = () => {
         </div>
       </section>
 
+      {/* 🔥 NUEVA SECCIÓN: HORARIOS DE ATENCIÓN */}
+      <section className="py-24 bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-museo-gold/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-16">
+            <span className="text-museo-gold font-semibold text-lg uppercase tracking-wider flex items-center justify-center gap-2">
+              <span>⏰</span> Planifica tu Visita
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mt-4 mb-6">
+              Horarios de Atención
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Te esperamos para una experiencia cultural inolvidable
+            </p>
+          </div>
+
+          <div className="max-w-5xl mx-auto">
+            {/* Grid de horarios */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              {horarios.map((item, index) => (
+                <div
+                  key={index}
+                  className={`group relative ${item.bgColor} rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border-2 ${item.dia === 'Lunes' ? 'border-red-200' : item.dia.includes('Martes') ? 'border-green-200' : 'border-blue-200'} overflow-hidden`}
+                >
+                  {/* Icon backdrop */}
+                  <div className="absolute top-4 right-4 text-6xl opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+                    {item.icon}
+                  </div>
+                  
+                  <div className="relative z-10">
+                    {/* Icon */}
+                    <div className="text-5xl mb-4 transform group-hover:scale-110 transition-transform duration-300">
+                      {item.icon}
+                    </div>
+                    
+                    {/* Día */}
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">
+                      {item.dia}
+                    </h3>
+                    
+                    {/* Horario */}
+                    <div className={`text-3xl font-bold ${item.color} flex items-center gap-2`}>
+                      {item.dia === 'Lunes' ? (
+                        <span className="flex items-center gap-2">
+                          <span className="text-2xl">🚫</span>
+                          <span>{item.horario}</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <span className="text-2xl">🕐</span>
+                          <span>{item.horario}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Información adicional */}
+            <div className="bg-gradient-to-br from-museo-gold to-yellow-600 rounded-3xl p-8 md:p-12 shadow-2xl text-white relative overflow-hidden">
+              {/* Pattern overlay */}
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute inset-0" style={{
+                  backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 35px, white 35px, white 70px)`
+                }} />
+              </div>
+
+              <div className="relative z-10 grid md:grid-cols-2 gap-8 items-center">
+                {/* Left side - Main info */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-5xl">🎫</span>
+                    <h3 className="text-3xl font-bold">¡Entrada Gratuita!</h3>
+                  </div>
+                  <p className="text-xl text-white/90 leading-relaxed">
+                    El Museo Pumapungo es completamente <span className="font-bold">gratuito</span> para todo el público. 
+                    Ven y disfruta de nuestras exposiciones sin costo alguno.
+                  </p>
+                </div>
+
+                {/* Right side - Quick info */}
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border border-white/30">
+                  <h4 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span>📍</span>
+                    Información Importante
+                  </h4>
+                  <div className="space-y-3 text-white/90">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl mt-0.5">✓</span>
+                      <span>Entrada libre y gratuita</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl mt-0.5">✓</span>
+                      <span>No se requiere reserva previa</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl mt-0.5">✓</span>
+                      <span>Ideal para grupos y familias</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl mt-0.5">✓</span>
+                      <span>Visitas guiadas disponibles</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA para generar itinerario */}
+            <div className="mt-12 text-center">
+              <p className="text-gray-600 mb-6 text-lg">
+                ¿Listo para tu visita? Genera tu itinerario personalizado ahora
+              </p>
+              {!user ? (
+                <button
+                  onClick={handleGoogleLogin}
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-museo-gold to-yellow-600 text-white font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                >
+                  <span className="text-2xl">🤖</span>
+                  <span>Generar Mi Itinerario</span>
+                </button>
+              ) : (
+                <Link
+                  to="/generar-itinerario"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-museo-gold to-yellow-600 text-white font-bold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                >
+                  <span className="text-2xl">🤖</span>
+                  <span>Generar Mi Itinerario</span>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* SECCIÓN DE ESTADÍSTICAS DEL MUSEO - Con fondo oscuro dramático */}
       <section className="relative py-24 bg-gradient-to-br from-gray-900 via-museo-brown to-gray-900 text-white overflow-hidden">
         {/* Background pattern */}
@@ -208,7 +352,7 @@ const Home = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
             {[
-              { number: '8', label: 'Áreas Temáticas', icon: '🏛️' },
+              { number: '7', label: 'Áreas Temáticas', icon: '🏛️' },
               { number: '3000+', label: 'Piezas Arqueológicas', icon: '🏺' },
               { number: '5 Ha', label: 'Jardín Botánico', icon: '🌿' },
               { number: 'UNESCO', label: 'Patrimonio', icon: '🏆' }

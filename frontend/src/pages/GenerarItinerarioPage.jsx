@@ -207,7 +207,7 @@ const GenerarItinerarioPage = () => {
               <span>Creando tu primera área...</span>
             </p>
             <p className="text-sm text-primary-600 font-semibold mt-4">
-              ⚡ Esto tomará solo 30 segundos...
+              ⚡ Esto tomará solo 2 minutos...
             </p>
             <p className="text-xs text-gray-500">
               El resto se generará mientras exploras 🔄
@@ -434,7 +434,7 @@ const GenerarItinerarioPage = () => {
           >
             <span className="flex items-center justify-center gap-3">
               <span>⚡</span>
-              <span>Generar Mi Itinerario (30 segundos)</span>
+              <span>Generar Mi Itinerario (2 minutos)</span>
             </span>
           </button>
 

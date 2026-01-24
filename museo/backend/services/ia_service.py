@@ -1,4 +1,4 @@
-# services/ia_service_HIBRIDO.py
+# services/ia_service.py
 # 🔥 VERSIÓN HÍBRIDA: KB + Web Search como fallback
 
 import requests
