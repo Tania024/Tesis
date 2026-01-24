@@ -173,12 +173,11 @@ CREATE INDEX idx_itinerario_detalles_orden ON itinerario_detalles(itinerario_id,
 -- Áreas del Museo Pumapungo (basado en investigación)
 INSERT INTO areas (codigo, nombre, categoria, subcategoria, descripcion, tiempo_minimo, tiempo_maximo, capacidad_simultanea, orden_recomendado) VALUES
 ('ARQ-01', 'Sala Arqueológica Cañari', 'arqueologia', 'cañari', 'Vestigios de la cultura Cañari preincaica', 20, 40, 25, 1),
-('ARQ-02', 'Sala Inca', 'arqueologia', 'inca', 'Ocupación Inca en la región', 15, 30, 20, 2),
 ('ETN-01', 'Sala Etnográfica', 'etnografia', 'indigenas', 'Culturas indígenas del Ecuador', 25, 50, 30, 3),
 ('AVE-01', 'Aviario de Aves Andinas', 'aves', 'rescate', 'Aves rescatadas de la región andina', 15, 25, 15, 4),
 ('BOT-01', 'Jardín Botánico', 'plantas', 'nativas', 'Flora endémica ecuatoriana', 20, 40, 40, 5),
 ('ART-01', 'Sala de Arte Colonial', 'arte', 'colonial', 'Arte religioso colonial', 15, 30, 20, 6),
-('RUIN-01', 'Ruinas Pumapungo', 'arqueologia', 'exterior', 'Ruinas arqueológicas al aire libre', 30, 60, 50, 7),
+('RUIN-01', 'Parque Arqueológico Pumapungo', 'arqueologia', 'exterior', 'Parque arqueológicas al aire libre', 30, 60, 50, 7),
 ('TEMP-01', 'Exhibición Temporal', 'temporal', NULL, 'Exhibiciones rotativas', 10, 30, 25, 8);
 
 -- ============================================

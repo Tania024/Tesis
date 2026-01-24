@@ -200,8 +200,42 @@ export const itinerariosAPI = {
   },
   guardarEvaluacion: async (itinerarioId, evaluacion) => {
     return await evaluacionesAPI.guardarEvaluacion(itinerarioId, evaluacion);
+  },
+  actualizar: async (id, datos) => {
+    const response = await api.put(`/itinerarios/${id}`, datos);
+    return response.data;
+  },
+  generarProgresivo: async (visitanteId, datos) => {
+    try {
+      const response = await api.post('/ia/generar-itinerario-progresivo', {
+        visitante_id: visitanteId,
+        intereses: datos.intereses || [],
+        tiempo_disponible: datos.tiempo_disponible || null,
+        nivel_detalle: datos.nivel_detalle || 'normal',
+        incluir_descansos: datos.incluir_descansos !== false,
+        areas_evitar: datos.areas_evitar || []
+      });
+      
+      console.log('✅ Primera área generada, resto en progreso');
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error en generación progresiva:', error);
+      throw error;
+    }
+  },
+
+  // 🔥 NUEVO: Obtener estado de generación (para polling)
+  obtenerEstadoGeneracion: async (itinerarioId) => {
+    try {
+      const response = await api.get(`/ia/itinerario/${itinerarioId}/estado-generacion`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error obteniendo estado:', error);
+      throw error;
+    }
   }
-}
+};
+
 
 // ============================================
 // DETALLES DE ITINERARIO API
@@ -350,6 +384,12 @@ export const evaluacionesAPI = {
       console.error('❌ Error guardando evaluación:', error.response?.data || error);
       throw error;
     }
+  },
+
+  // ✅ FUNCIÓN QUE FALTABA
+  obtenerEstadisticas: async () => {
+    const response = await api.get('/evaluaciones/estadisticas');
+    return response.data;
   }
 };
 

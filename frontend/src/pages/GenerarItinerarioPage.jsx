@@ -35,6 +35,7 @@ const GenerarItinerarioPage = () => {
       
       const data = await perfilesAPI.obtener(user.visitante_id);
       
+      
       console.log('✅ Perfil cargado:', data);
       
       if (data) {
@@ -90,29 +91,28 @@ const GenerarItinerarioPage = () => {
       console.log('Intereses:', perfil?.intereses || []);
 
       const MAPA_INTERESES = {
-  cultura: ['arqueologia', 'etnografia', 'historia', 'arte'],
-  naturaleza: ['aves', 'plantas', 'biodiversidad'],
-  historia: ['arqueologia', 'historia'],
-};
-
+        cultura: ['arqueologia', 'etnografia', 'historia', 'arte'],
+        naturaleza: ['aves', 'plantas', 'biodiversidad'],
+        historia: ['arqueologia', 'historia'],
+      };
 
       // Asegurar que intereses sea un array de strings
       const interesesArray = [];
 
-if (Array.isArray(perfil?.intereses)) {
-  perfil.intereses.forEach(interes => {
-    if (MAPA_INTERESES[interes]) {
-      interesesArray.push(...MAPA_INTERESES[interes]);
-    } else {
-      interesesArray.push(interes);
-    }
-  });
-}
+      if (Array.isArray(perfil?.intereses)) {
+        perfil.intereses.forEach(interes => {
+          if (MAPA_INTERESES[interes]) {
+            interesesArray.push(...MAPA_INTERESES[interes]);
+          } else {
+            interesesArray.push(interes);
+          }
+        });
+      }
 
-// fallback seguro
-if (interesesArray.length === 0) {
-  interesesArray.push('arqueologia');
-}
+      // fallback seguro
+      if (interesesArray.length === 0) {
+        interesesArray.push('arqueologia');
+      }
 
       const MAPA_NIVEL_DETALLE = {
         basico: 'rapido',
@@ -126,15 +126,15 @@ if (interesesArray.length === 0) {
         intereses: interesesArray.length > 0 ? interesesArray : ['cultura'],
         tiempo_disponible: tiempoFinal,
         nivel_detalle: MAPA_NIVEL_DETALLE[nivelDetalle],
-
         incluir_descansos: tiempoFinal ? tiempoFinal > 90 : true,
         areas_evitar: []
       };
 
       console.log('📤 Payload enviado:', JSON.stringify(payload, null, 2));
 
-      const response = await itinerariosAPI.generar(payload);
-
+      // 🔥🔥🔥 CAMBIO CRÍTICO: Usar endpoint PROGRESIVO 🔥🔥🔥
+      const response = await itinerariosAPI.generarProgresivo(user.visitante_id, payload);
+      
       console.log('✅ Respuesta del backend:', response);
 
       // Redirigir al itinerario generado
@@ -204,10 +204,13 @@ if (interesesArray.length === 0) {
             </p>
             <p className="flex items-center justify-center gap-2">
               <span>✨</span>
-              <span>Creando tu ruta perfecta...</span>
+              <span>Creando tu primera área...</span>
             </p>
-            <p className="text-sm text-gray-500 mt-4">
-              Esto puede tardar 2-3 minutos...
+            <p className="text-sm text-primary-600 font-semibold mt-4">
+              ⚡ Esto tomará solo 30 segundos...
+            </p>
+            <p className="text-xs text-gray-500">
+              El resto se generará mientras exploras 🔄
             </p>
           </div>
         </div>
@@ -364,19 +367,19 @@ if (interesesArray.length === 0) {
                   value: 'basico', 
                   label: 'Básico', 
                   icon: '⚡', 
-                  desc: 'Vista rápida de lo esencial' 
+                  desc: 'Vista rápida de lo esencial (3 datos curiosos)' 
                 },
                 { 
                   value: 'medio', 
                   label: 'Medio', 
                   icon: '👌', 
-                  desc: 'Balance entre rapidez y detalle' 
+                  desc: 'Balance entre rapidez y detalle (4-5 datos)' 
                 },
                 { 
                   value: 'detallado', 
                   label: 'Detallado', 
                   icon: '🔬', 
-                  desc: 'Explicaciones profundas y completas' 
+                  desc: 'Explicaciones profundas y completas (7 datos + 8 observaciones)' 
                 }
               ].map((opcion) => (
                 <button
@@ -430,8 +433,8 @@ if (interesesArray.length === 0) {
             className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="flex items-center justify-center gap-3">
-              <span>✨</span>
-              <span>Generar Mi Itinerario Personalizado</span>
+              <span>⚡</span>
+              <span>Generar Mi Itinerario (30 segundos)</span>
             </span>
           </button>
 

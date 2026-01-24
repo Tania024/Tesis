@@ -34,12 +34,11 @@ OUTPUT_FILE = "museo_knowledge.json"
 # Áreas del Museo Pumapungo (basado en tu BD)
 AREAS_MUSEO = {
     "ARQ-01": "Sala Arqueológica Cañari",
-    "ARQ-02": "Sala Inca",
     "ETN-01": "Sala Etnográfica",
     "AVE-01": "Aviario de Aves Andinas",
     "BOT-01": "Jardín Botánico",
     "ART-01": "Sala de Arte Colonial",
-    "RUIN-01": "Ruinas Pumapungo",
+    "RUIN-01": "Parque Arqueológico Pumapungo",
     "TEMP-01": "Exhibición Temporal"
 }
 

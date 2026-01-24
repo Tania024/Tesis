@@ -1,327 +1,245 @@
 {
   "museo": "Museo Pumapungo",
   "ubicacion": "Cuenca, Ecuador",
-  "fecha_procesamiento": "2026-01-21T06:35:36.622900",
-  "total_pdfs": 14,
+  "fecha_procesamiento": "2026-01-21T18:09:30.183448",
+  "total_pdfs": 13,
+  "total_areas": 7,
   "areas": {
     "ARQ-01": {
       "codigo": "ARQ-01",
       "nombre": "Sala Arqueológica Cañari",
-      "descripcion": "",
-      "historia": "",
+      "descripcion": "Espacio dedicado a la cultura preincaica Cañari con piezas arqueológicas, cerámica y objetos ceremoniales",
+      "historia": "Los Cañaris habitaron la región del austro ecuatoriano antes de la llegada de los Incas",
       "objetos_destacados": [
-        "Sistemas Hidráulicos",
-        "Museo Británico",
-        "Louvre",
-        "Afiches",
-        "Piedra calcárea",
-        "Catálogos",
-        "Pumapungo",
-        "Talleres",
-        "Capitolino",
-        "Comunidad educativa",
-        "Crénero arqueológico",
-        "Jadeita",
-        "Alabastro",
-        "Obsidiana",
-        "Puente entre Ciencia, Tecnología y Cultura"
+        "Cerámica Cañari",
+        "Herramientas de piedra",
+        "Objetos ceremoniales",
+        "Piezas de orfebrería",
+        "Textiles precolombinos"
       ],
       "datos_curiosos": [
-        "Sistemas Irrigación Antiguos",
-        "Louvre",
-        "Herculano y Pompeya",
-        "Organización de talleres educativos",
-        "Zonilla de tierra colmeada",
-        "PUMAPUNGO",
-        "Participación de grupos rurales",
-        "Reconstrucción ARCA",
-        "Capitolino",
-        "Maizales con semillas de Quinua, Totora, Paja etc.",
-        "Museo Británico"
+        "Los Cañaris fueron conocidos por su resistencia ante la conquista Inca",
+        "Desarrollaron técnicas avanzadas de cerámica con diseños geométricos característicos",
+        "Su territorio abarcaba lo que hoy es Azuay y Cañar",
+        "Mantuvieron alianzas estratégicas con los españoles contra los Incas",
+        "Su cosmovisión estaba centrada en la dualidad y el culto a las montañas sagradas"
       ],
       "temas_principales": [
-        "Educación formal",
-        "Evolución de la museología",
-        "Sistemas Irrigación Antiguos",
-        "Funciones pedagógicas",
-        "Templos Andinos",
-        "Antropología",
-        "Patio interior",
-        "Construcción de patios",
-        "Museos públicos",
-        "Proyecto diuc",
-        "Investigación y exposición",
-        "Etnografía",
-        "arqueología",
-        "Museos nacionales",
-        "Política cultural",
-        "Reconstrucción ARCA",
-        "contribuciones de Max Uhle",
-        "Adquisición y conservación de obras",
-        "Objets artiscales",
-        "Reconstrucción facial forense digital",
-        "Comparación Sistemas Hidráulicos",
-        "Difusión cultural",
-        "Arqueología"
+        "Cultura Cañari",
+        "Arqueología preincaica",
+        "Cerámica ancestral",
+        "Resistencia cultural",
+        "Organización social Cañari"
       ],
       "informacion_detallada": [
-        "MUSEO PUMAPUNGO",
-        "CRÉNFOSA HALLADO EN PUMAPUNGO",
-        "Objetos de Various clases construidos con piedra calcárea, obsidiana, alabastro y jadeita.",
-        "Representaciones figurativas de la figure humana con ajedrez y barbas.",
-        "El patio interior del palacio tuvo que servir para grandes paradas, revistas, recepciones y asambleas de varias clases. A la realización de tales propósitos la depresión original del terreno hasta 1,30 a 1,50 metros debajo del nivel de las partes adyacentes, tuvo que presentar aquí naturalmente un impedimento muy grave.",
-        "El patio cuadrado con relleno de tierra calzada, traída de otras cuatro cuartos dispuestos en sus cuatro lados adentro, y en las es- partes. Por consiguiente, la superficie del suelo original se encuentra que las partes frontales de los palacios interiores estaban construídas de aquella hermosa albañilería que admiramos todavía en el óvalo de Ingapirca.",
-        "Max Uhle",
-        "arqueología del Austro ecuatoriano",
-        "Sítio Arqueológico Cañari",
-        "La app le propone un reto interactivo: manipular compuertas y canales virtuales para lograr que el agua fluya correctamente por las terrazas agrícolas del complejo.",
-        "Al superar el desafío, Carlos obtiene una medalla digital de 'Maestro Ingeniero Cañari', y la plataforma le sugiere comparar los sistemas hidráulicos del Pumapungo con otras maravillas arqueológicas del mundo.",
-        "Sala Arqueológica Cañari",
-        "La SALA ARQUEÓLOGICA CAÑARI (ARQ-01) es una sala que combina arqueología y museología, y cuya ubicación se basa en altares de arqueología andina.",
-        "La SALA INCA (ARQ-01 también) albergaba altares y templos andinos, inspirados en las culturas precolombinas e incluyendo cerros, colinas y valles.",
-        "Sientas el sentimiento de 'dar al Pueblo lo que le pertenece'. Son los museos públicos la manifestación del desmantelamiento de la cultura artística aristocrática y cortesana y del florecimiento...",
-        "Museos nacionales como el Capitolino, el Museo Británico y el Louvre, 23 que se ocupa de la adquisición, conservación, investigación, trasmisión de la información y exposición de testimonios materiales...",
-        "En las últimas décadas, se han abierto nuevas perspectivas sobre la museología, evolucionando su functions de museología como disciplina socio-científica que ha ido creciendo históricamente",
-        "Klaus Schreiner define a la museología como '... una disciplina socio-científica que ha ido creciendo históricamente que concierne a las leyes, los principios, las estructuras y los métodos del complejo proceso de adquisición, preservación, desciframiento, investigación y exposición de objetos originales tomados de la naturaleza y de la sociedad'",
-        "Bernard Deloch señala que el museo se convierte en centro de tratamiento y análisis",
-        "Difusión educativa a partir de la sala y sus servicios, incluyendo material de difusión como afiches, catálogos y talleres.",
-        "Estructura de una nueva función pedagógica del Museo dirigida hacia la comunidad educativa."
-      ]
-    },
-    "ARQ-02": {
-      "codigo": "ARQ-02",
-      "nombre": "Sala Inca",
-      "descripcion": "",
-      "historia": "",
-      "objetos_destacados": [
-        "Ruinas Pumapungo",
-        "Manejo de información",
-        "Louvre",
-        "Guías de turismo bilingües",
-        "Sistemas de Irrigación",
-        "Organización Urbana Ancestral",
-        "Capitolino",
-        "Sala Tomebamba",
-        "Museo Británico"
-      ],
-      "datos_curiosos": [
-        "Carlos, ingeniero civil apasionado por la tecnología y las culturas ancestales",
-        "Certificados de participación",
-        "120 asintints al curso",
-        "Museo Pumapungo"
-      ],
-      "temas_principales": [
-        "Klaus Schreiner",
-        "Evolución de la museología",
-        "Organización técnica",
-        "Proyectos educativos",
-        "Ingeniería Antigua",
-        "Bernard Deloch",
-        "Ingeniería Hidráulica",
-        "Construcción colonial",
-        "sistemas organizativos",
-        "Difusión educativa",
-        "Arqueología",
-        "Paredes y muros",
-        "geografía"
-      ],
-      "informacion_detallada": [
-        "Las paredes muestran, en todas partes, un grosor minucioso de85 centímetros. Es éste el mismo que las que se notan en muchas otras construcciones de los Incas.",
-        "En este palacio, todas las direcciones de murallas son independientes de la referencia astronómica.",
-        "geografía",
-        "sistemas organizativos",
-        "Carlos, ingeniero civil apasionado por la tecnología y las culturas ancestrales, llega al Museo Pumapungo con la intención de descubrir los secretos de la ingeniería antigua.",
-        "Al registrarse en la app oficial y completar su perfil, el sistema reconoce su interés por la arqueología y la ingeniería hidráulica.",
-        "Sala Arqueológica General",
-        "En las últimas décadas, se han abierto nuevas perspectivas sobre la museología, evolucionando su functions de museología como disciplina socio-científica que ha ido creciendo históricamente",
-        "Klaus Schreiner define a la museología como '... una disciplina socio-científica que ha ido creciendo históricamente que concierne a las leyes, los principios, las estructuras y los métodos del complejo proceso de adquisición, preservación, desciframiento, investigación y exposición de objetos originales tomados de la naturaleza y de la sociedad'",
-        "Bernard Deloch señala que el museo se convierte en centro de tratamiento y análisis",
-        "Capacitación a un grupo especializado de guías de turismo bilingües dentro del manejo de información en el Museo y parque arqueológico.",
-        "Proyecto de la nueva sala Tomebamba con functions educativas y de atención al público, incluyendo capacitaciones y selección de guías."
+        "La Sala Arqueológica Cañari presenta vestigios de la cultura que dominó el austro ecuatoriano entre los años 500 y 1500 d.C. Los Cañaris desarrollaron una sociedad compleja con centros ceremoniales, sistemas agrícolas en terrazas y una rica producción artesanal.",
+        "Las piezas arqueológicas exhibidas incluyen cerámica característica con decoración incisa y pintada, herramientas líticas para agricultura y construcción, y objetos de uso ceremonial que evidencian prácticas religiosas complejas.",
+        "La cerámica Cañari se distingue por sus formas antropomorfas y zoomorfas, así como por el uso de diseños geométricos que representaban elementos de su cosmovisión. Los colores predominantes son el rojo, negro y crema sobre fondo natural.",
+        "Los Cañaris mantuvieron su identidad cultural incluso después de la conquista Inca, incorporando elementos foráneos sin perder sus tradiciones ancestrales. Esta resistencia cultural se evidencia en la persistencia de técnicas y estilos propios.",
+        "El estudio arqueológico de los sitios Cañaris ha revelado una sociedad estratificada con élites que controlaban la producción artesanal y el comercio regional, conectando la sierra con la costa y la amazonía."
       ]
     },
     "ETN-01": {
       "codigo": "ETN-01",
       "nombre": "Sala Etnográfica",
-      "descripcion": "",
-      "historia": "",
+      "descripcion": "Espacio dedicado a la diversidad cultural del Ecuador contemporáneo",
+      "historia": "Sala que representa la riqueza cultural de los pueblos y nacionalidades del Ecuador",
       "objetos_destacados": [
-        "Aviario de Aves Andinas",
-        "Programas de investigación",
-        "Patrimonio Antiguo",
-        "Museo Etnográfico Nacional",
-        "Parque arqueológico",
-        "Etnobotanico",
-        "Jardín Botánico"
+        "Trajes ceremoniales Shuar",
+        "Tejidos Otavalos",
+        "Instrumentos musicales montubios",
+        "Máscaras afroecuatorianas",
+        "Artesanías tradicionales",
+        "Marimba esmeraldeña"
       ],
       "datos_curiosos": [
-        "Reconstrucción en realidad aumentada",
-        "Sistemas Irrigación Antiguos",
-        "Creación de un banco global de datos",
-        "Especialización de museos nacionales",
-        "Asistencia a grupos speciales"
+        "El pueblo Shuar mantiene vivas sus tradiciones en la Amazonía ecuatoriana",
+        "Los tejidos otavalos son reconocidos mundialmente por su calidad",
+        "La identidad montubia fue reconocida constitucionalmente en 2008",
+        "La marimba afroecuatoriana es Patrimonio Cultural Inmaterial",
+        "Ecuador es uno de los países más diversos culturalmente de América Latina"
       ],
       "temas_principales": [
-        "Zooprofección",
-        "Sistemas Irrigación Antiguos",
-        "Etnografía",
-        "ruinas",
-        "Sociedades Regionales",
-        "Investigaciones",
-        "Cultural",
-        "Proyectos educativos",
-        "Construcción de extensiones",
-        "Educación",
-        "Museos",
-        "Período Formativo",
-        "Reconstrucción ARCA",
-        "Organización Urbana Ancestral",
-        "Jardines",
-        "Ciudad Autonomía",
-        "Pumapungo",
-        "Ampliación de edificios"
+        "Diversidad cultural",
+        "Pueblos y nacionalidades",
+        "Tradiciones vivas",
+        "Artesanía contemporánea",
+        "Identidad ecuatoriana"
       ],
       "informacion_detallada": [
-        "Educación sobre nuestra cultura",
-        "En otros palacios, como en los de Tambo Colorado, y en Tambo Blanco cerca de San Lucas, la ampliación del tipo común y más antiguo edificio está hoy todavía en el Noreste, por 50 centímetros y sencillo se ha efectuado en lo principal por medio de la combinación de varios patios, dos o tres, uno tras otro. Aquí, fuera de la enorme ampliación del patio principal, se la ha hecho de manera que dos palacios cada uno en sí mismo organizado como los palacios comunes, quedan en el fondo del lugar, lado a lado, en valor de 50 centímetros y sencillo.",
-        "Ruinas Pumapungo",
-        "El Museo Etnográfico Nacional en Cuenca fue una decisión de las autoridades de Quito que especializaron a cada una de las tres ciudades principales del Ecuador en tres museos nacionales.",
-        "Sítio Etnográfico",
-        "La app activa una reconstrucción en realidad aumentada sobre su pantalla: puede observar, superpuestas a las estructuras actuales, las edificaciones y canales como lucía siglos atrás.",
-        "Carlos explora los sistemas de irrigación y la organización urbana ancestral, recibiendo explicaciones y anécdotas que enriquecen su experiencia.",
-        "Desarrollo Regionales (600 a.C al 500 d.C)",
-        "sociedades que se caracterizaron precisamente por el desarrollo económico, social y religioso",
-        "La SALA ETNICA (ETN-01) incluía jardines con zonas culturales, silvestres y animales domésticos, además de lagartos, aves, etc.",
-        "Se detallaban menútilos sobre variedades como manzanas, naranjas, limón y uvas.",
-        "Información que no corresponde a ningún área específica",
-        "Proyecto educativo 'La magia de Nuestros Taitas' que difundiría resultados de investigaciones y crearía programas de investigación científica.",
-        "Uso del parque arqueológico y etnobotanico para edukación cultural."
+        "La Sala Etnográfica presenta la diversidad cultural del Ecuador a través de objetos, textiles, instrumentos y manifestaciones de los pueblos y nacionalidades indígenas, afroecuatorianos y montubios que habitan el territorio nacional.",
+        "Los Shuar, pueblo amazónico, mantienen una fuerte conexión con la selva y sus prácticas ancestrales. Sus conocimientos sobre plantas medicinales y su cosmovisión basada en los sueños son fundamentales para su identidad cultural.",
+        "Los Otavalos, de la sierra norte, son reconocidos internacionalmente por sus textiles. Las mujeres tejen utilizando técnicas transmitidas de generación en generación, creando piezas únicas que combinan tradición e innovación.",
+        "La cultura montubia del litoral ecuatoriano se expresa a través de la música, la gastronomía y las festividades campesinas. Su identidad se forjó en el campo costeño, desarrollando una cultura mestiza con características propias.",
+        "La población afroecuatoriana, presente principalmente en Esmeraldas y el Valle del Chota, conserva tradiciones africanas fusionadas con elementos locales. La marimba, los arrullos y la bomba son expresiones culturales reconocidas como patrimonio."
       ]
     },
     "AVE-01": {
       "codigo": "AVE-01",
       "nombre": "Aviario de Aves Andinas",
-      "descripcion": "",
-      "historia": "",
-      "objetos_destacados": [],
-      "datos_curiosos": [],
+      "descripcion": "Centro de rescate y exhibición de aves silvestres del Ecuador",
+      "historia": "Espacio creado para la conservación de aves rescatadas del tráfico ilegal",
+      "objetos_destacados": [
+        "Área de cuarentena",
+        "Jaulas de exhibición",
+        "Centro del Saber",
+        "Bioterio",
+        "Área veterinaria"
+      ],
+      "datos_curiosos": [
+        "El aviario puede albergar hasta 166 aves simultáneamente",
+        "Representa la cosmovisión andina con símbolos del cóndor y el guacamayo",
+        "Funciona como centro de rehabilitación de fauna silvestre",
+        "Las aves provienen de decomisos por tráfico ilegal",
+        "El diseño arquitectónico se inspira en los Jardines del Inca"
+      ],
       "temas_principales": [
-        "aves andinas",
-        "aviario"
+        "Conservación de avifauna",
+        "Rescate animal",
+        "Educación ambiental",
+        "Biodiversidad ecuatoriana",
+        "Cosmovisión andina"
       ],
       "informacion_detallada": [
-        "aviario de Aves Andinas"
+        "El Aviario del Museo Pumapungo funciona como centro de recepción, curación y rehabilitación de aves silvestres rescatadas del tráfico ilegal o entregadas voluntariamente. Su objetivo es la conservación y la educación ambiental.",
+        "El proceso de atención incluye cuatro etapas: observación y cuarentena, tratamiento médico veterinario, alimentación balanceada según especie, y disposición final (liberación, exhibición o custodia). Las aves muy domesticadas permanecen en exhibición.",
+        "El área de exhibición cuenta con jaulas diseñadas según el tamaño de las aves: pequeñas, medianas, grandes y rapaces. Cada espacio recrea elementos de su hábitat natural para garantizar el bienestar animal.",
+        "El Centro del Saber tiene forma de chulpa incaica y funciona como sala educativa. En la planta baja se proyectan videos sobre conservación, y en la segunda planta hay una biblioteca digital especializada en manejo de vida silvestre.",
+        "El aviario no solo protege aves, sino que representa elementos de la cosmovisión andina: el cóndor y el curiquingue simbolizan la cumbre de la cadena alimenticia, mientras que el guacamayo representa a los superpredadores hablantes."
       ]
     },
     "BOT-01": {
       "codigo": "BOT-01",
       "nombre": "Jardín Botánico",
-      "descripcion": "",
-      "historia": "",
-      "objetos_destacados": [],
-      "datos_curiosos": [],
+      "descripcion": "Espacio inspirado en los Jardines del Inka con chacras andinas",
+      "historia": "Diseñado siguiendo los principios de los jardines incaicos",
+      "objetos_destacados": [
+        "Chacras andinas",
+        "Camellones elevados",
+        "Senderos diferenciados",
+        "Cultivos estacionales",
+        "Sistema de caminería"
+      ],
+      "datos_curiosos": [
+        "Los camellones son tecnología agrícola de 6,000 años de antigüedad",
+        "El diseño integra funcionalidad agrícola con belleza paisajística",
+        "Existen senderos exclusivos para personal y visitantes",
+        "La chacra andina difiere del concepto europeo de huerto",
+        "Se conecta con el Parque Arqueológico a través de senderos"
+      ],
       "temas_principales": [
-        "sombreros",
-        "Jardín Botánico",
-        "cascarilla",
-        "jardín botánico"
+        "Agricultura andina",
+        "Jardines del Inka",
+        "Camellones",
+        "Chacras tradicionales",
+        "Paisajismo prehispánico"
       ],
       "informacion_detallada": [
-        "Jardín Botánico",
-        "plantaciones de cascarilla y sombreros",
-        "Jardín Botánico",
-        "Toapanta, Viviana (2006). ―Museos del Ecuador‖. Disponible en: http://www.monografias.com/trabajos36/museos-ecuador/museos-ecuador.shtml",
-        "Museo Pumapungo"
+        "El Jardín Botánico del Museo Pumapungo recrea los Jardines del Inka, espacios que combinaban agricultura, paisajismo y simbolismo ceremonial. No es un jardín ornamental sino un sistema agrícola ancestral funcional.",
+        "Los camellones elevados son una tecnología milenaria desarrollada en el litoral ecuatoriano y adaptada a la sierra. Permitían cultivar en zonas pantanosas o inundables, mejorando la productividad y el drenaje del suelo.",
+        "Las chacras andinas representan el concepto indígena de agricultura: sistemas de cultivos diversos asociados que responden a las estaciones y al ciclo natural. Difieren del huerto europeo por su integración de múltiples especies en armonía.",
+        "El diseño incluye caminerías principales para turistas, senderos secundarios para visitantes con movilidad reducida, y vías restringidas para personal del museo. Una vía marginal sigue la ribera del Tomebamba.",
+        "El jardín no es solo un espacio contemplativo sino un laboratorio vivo donde se enseña cómo los incas y cañaris organizaron el territorio, diseñando espacios que integraban utilidad agrícola, belleza estética y cosmovisión andina."
+      ]
+    },
+    "RUIN-01": {
+      "codigo": "RUIN-01",
+      "nombre": "Parque Arqueológico Pumapungo",
+      "descripcion": "Sitio arqueológico del palacio de Huayna Cápac, segunda capital del Tawantinsuyu",
+      "historia": "Complejo arqueológico excavado y conservado desde los años 1970",
+      "objetos_destacados": [
+        "Restos del palacio de Huayna Cápac",
+        "Sistema de acueductos incas",
+        "Plataformas ceremoniales",
+        "Muros de piedra tipo cola de milano",
+        "Patio hundido con relleno ritual"
+      ],
+      "datos_curiosos": [
+        "Pumapungo significa 'Puerta del Puma'",
+        "Se cree que Huayna Cápac nació aquí",
+        "Los canales de agua aún funcionan parcialmente",
+        "Fue declarado Patrimonio Cultural del Ecuador en 1992",
+        "Combina técnicas constructivas cañaris e incas"
+      ],
+      "temas_principales": [
+        "Imperio Inca",
+        "Arquitectura incaica",
+        "Huayna Cápac",
+        "Tomebamba",
+        "Conservación arqueológica"
+      ],
+      "informacion_detallada": [
+        "Las ruinas de Pumapungo son los restos del palacio de Huayna Cápac, undécimo inca del Tawantinsuyu. Este complejo fue diseñado para rivalizar en esplendor con el Qorikancha de Cusco y servir como segunda capital del imperio.",
+        "El sitio se extiende sobre una colina con vista dominante al valle de Cuenca, siguiendo el principio inca de integrar el poder político con el control visual del territorio. Las excavaciones han revelado sectores residenciales, ceremoniales, administrativos y de almacenamiento.",
+        "Uno de los hallazgos más significativos es un patio hundido de 1.50 metros de profundidad, rellenado con tierra compactada traída de distintas regiones del imperio. Este acto simbolizaba la unificación territorial bajo el poder del Inca.",
+        "El complejo incluye muros dobles, cimientos profundos adaptados a la sismicidad local, y troneras que permitían ventilación y observación astronómica. Los materiales constructivos combinan piedra volcánica local con técnicas imperiales incas.",
+        "Pumapungo no era solo un palacio sino un centro de redistribución de bienes, administración de justicia y realización de rituales estatales. Estaba conectado a la red vial del Qhapaq Ñan que unía todo el Tawantinsuyu."
       ]
     },
     "ART-01": {
       "codigo": "ART-01",
       "nombre": "Sala de Arte Colonial",
-      "descripcion": "",
-      "historia": "",
+      "descripcion": "Colección de arte religioso de la Escuela Quiteña y Cuzqueña",
+      "historia": "Sala creada para preservar el patrimonio artístico colonial del austro ecuatoriano",
       "objetos_destacados": [
-        "René Cardoso Segarra",
-        "Inca",
-        "Herradura",
-        "Hernán Crespo",
-        "Sergio Durán",
-        "Piedras"
+        "Pinturas de la Escuela Quiteña",
+        "Esculturas policromadas",
+        "Retablos con pan de oro",
+        "Objetos litúrgicos de plata",
+        "Herramientas de orfebrería colonial"
       ],
       "datos_curiosos": [
-        "Ejercicios litúrgicos",
-        "1979",
-        "Sacríficos",
-        "Vestíbulo de la celda",
-        "1978"
+        "Algunas pinturas incluyen ángeles con rasgos indígenas",
+        "Los artistas indígenas y mestizos rara vez firmaban sus obras",
+        "La técnica del 'encarnado' daba realismo a las imágenes sagradas",
+        "Cuenca fue un importante centro de producción artística colonial",
+        "Se utilizaba plata de las minas de Zaruma y Portovelo"
       ],
       "temas_principales": [
-        "Templo Construction",
-        "Museografía",
-        "Ritual Tools",
-        "Museos",
-        "Organización de colecciones",
-        "Ceremonial Processes"
+        "Escuela Quiteña",
+        "Arte colonial",
+        "Sincretismo religioso",
+        "Orfebrería colonial",
+        "Iconografía católica"
       ],
       "informacion_detallada": [
-        "Max Uhle: aportes a la arqueología del austro ecuatoriano\n\nLa explanada, en cierta manera separada. Una sala grande, dividida en su interior,\nlongitud por un muro tiene semejanza con varias de esta clase, que originalmente\nexistían en un edificio incaico, en Sulupali, en el valle de Yunguilla.",
-        "Además, se nota una parte de construcción muy densa y me-\nnuda en el medio, pegada a la misma muralla que separa, en el Sur, las construcciones\ndel corredor largo. Ocupa ésta una área de 23 por 26 metros, conteniéndose\nen ella, cuando menos, unos 10 cuartos diferentes.",
-        "Considero que se usaban para pesas en los lados de un techo, que,\noccasionalmente o siempre, sobre el pequeño cuarto se tendía. Otra curiosidad del\nlugar era una hacha de piedra de tamaño más que normal, que se halló entre los muros\ndel respaldo del cuarto.",
-        "El hacha habrá tenido aplicación en los ejercicios litúrgicos del templo.\nLos sacrificios se ejecutaban en honor del Dios en el vestíbulo de la celda, al\nOeste, donde también se presidía el asiento del Inca, al presidir la ejecución de los\nsacríficos.",
-        "En Cuenca el Banco vinculó a René Cardoso Segarra a la regional en 1978 por invitación de Hernán Crespo y Sergio Durán. Cardoso venía de especializarse en museografía en el Centro Churubusco del Instituto Nacional de Antropología de México donde conoció y fue compañero de Durán, con quien mantuvo las primeras conversaciones para su designación bajo la figura de encargado de la organización de las colecciones del Banco Central en Cuenca. Luego, a los dos años, fui nombrado jefe del museo."
+        "La Sala de Arte Colonial exhibe obras producidas en la Audiencia de Quito durante los siglos XVI al XVIII. Estas piezas reflejan el sincretismo entre modelos europeos y expresiones locales indígenas y mestizas.",
+        "Las pinturas de la Escuela Quiteña se caracterizan por su uso del color, la representación de santos con rasgos mestizos, y la inclusión de elementos del paisaje andino. Estas obras funcionaban como 'biblias visuales' para comunidades analfabetas.",
+        "Las esculturas de bulto en madera policromada demuestran el dominio técnico de artesanos locales. La técnica del encarnado, usando veladuras translúcidas sobre madera, creaba efectos de realismo en rostros y manos de las figuras sagradas.",
+        "La orfebrería colonial en la región utilizaba plata extraída de minas locales, combinando técnicas prehispánicas de fundición y repujado con diseños barrocos europeos. Cálices, custodias e incensarios reflejan esta síntesis cultural.",
+        "Los retablos organizaban el espacio sagrado de iglesias y capillas, narrando historias bíblicas con lenguaje simbólico accesible. El uso de pan de oro y policromía transformaba estos objetos en centros de devoción y admiración estética."
       ]
     },
-    "RUIN-01": {
-      "codigo": "RUIN-01",
-      "nombre": "Ruinas Pumapungo",
-      "descripcion": "",
-      "historia": "",
+    "MUSEO-01": {
+      "codigo": "MUSEO-01",
+      "nombre": "Historia del Museo Pumapungo",
+      "descripcion": "Información sobre la fundación y desarrollo del museo",
+      "historia": "Creado por el Banco Central del Ecuador en los años 1970",
       "objetos_destacados": [
-        "Area Cultural (ARQ-02)",
-        "Tazas",
-        "Joyas"
+        "Documentos fundacionales",
+        "Fotografías históricas",
+        "Planos arquitectónicos",
+        "Registro de excavaciones"
       ],
       "datos_curiosos": [
-        "1976"
+        "Fundado bajo la dirección de Hernán Crespo Toral en 1976",
+        "Integra museo, parque arqueológico y jardín etnobotánico",
+        "Es uno de los museos más visitados del austro ecuatoriano",
+        "Colabora con universidades en proyectos de investigación",
+        "Desarrolla programas educativos para escuelas y comunidades"
       ],
       "temas_principales": [
-        "Museo Inca",
-        "Colección Artesanal",
-        "Museos",
-        "Cultura Andina",
-        "Organización de exposiciones"
+        "Historia institucional",
+        "Museología",
+        "Conservación patrimonial",
+        "Educación cultural"
       ],
       "informacion_detallada": [
-        "El Area Cultural (ARQ-02) del Banco Central del Ecuador fue fundado en 1976 por Hernán Crespo para organizar y presentar itinerantes expositions de museología, arquitectura y cultura andinas.",
-        "El Museo Inca (RUIN-01) incluía un coleccionismo artesanal con joyas y tazas de Bronce, y una biblioteca de arqueología andina."
-      ]
-    },
-    "TEMP-01": {
-      "codigo": "TEMP-01",
-      "nombre": "Exhibición Temporal",
-      "descripcion": "",
-      "historia": "",
-      "objetos_destacados": [
-        "Convenio Formal",
-        "Museo Pumapungo",
-        "Legado de Pumapungo"
-      ],
-      "datos_curiosos": [
-        "Ciencia",
-        "Tecnología"
-      ],
-      "temas_principales": [
-        "Tecnología",
-        "Exposición temporal",
-        "Convenio Formal",
-        "Proyectos digitales",
-        "Legado de Pumapungo",
-        "Patrimonio",
-        "Ciencia"
-      ],
-      "informacion_detallada": [
-        "Proyecto semilla para proyectos digitales",
-        "Este proyecto aspira a convertirse en un verdadero puente entre la ciencia, la tecnología y el patrimonio, beneficiando tanto al museo como a la comunidad.",
-        "Para hacerlo realidad, se plantea la firma de un convenio formal que permita sumar esfuerzos, recursos y conocimientos, garantizando que el legado de Pumapungo siga creciendo, siendo preservado y compartido con nuevas generaciones y con el mundo."
+        "El Museo Pumapungo fue fundado en 1976 como parte del proyecto cultural del Banco Central del Ecuador en Cuenca, bajo la dirección de Hernán Crespo Toral. Su misión era rescatar, conservar y difundir el patrimonio arqueológico y cultural del austro ecuatoriano.",
+        "El complejo integra tres componentes: el museo con salas temáticas, el parque arqueológico con las ruinas de Pumapungo, y el jardín etnobotánico inspirado en los Jardines del Inka. Esta integración lo convierte en un espacio único de memoria y educación.",
+        "A lo largo de su historia, el museo ha desarrollado exposiciones temporales, programas educativos para estudiantes, talleres comunitarios y proyectos de investigación arqueológica en colaboración con universidades nacionales e internacionales.",
+        "El museo custodia importantes colecciones arqueológicas, etnográficas y artísticas que documentan más de 10,000 años de historia humana en la región. Su labor de conservación y difusión lo ha convertido en referente cultural del sur del Ecuador.",
+        "En 2010, el museo fue transferido al Ministerio de Cultura y Patrimonio, ampliando sus programas de acceso público, digitalización de colecciones y fortalecimiento de vínculos con comunidades locales para proyectos de salvaguardia del patrimonio cultural inmaterial."
       ]
     }
   }

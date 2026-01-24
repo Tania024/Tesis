@@ -141,7 +141,7 @@ class Area(Base):
 
 
 # ============================================
-# MODELO: ITINERARIOS
+# MODELO: ITINERARIOS (CORREGIDO)
 # ============================================
 
 class Itinerario(Base):
@@ -191,7 +191,6 @@ class Itinerario(Base):
     
     def __repr__(self):
         return f"<Itinerario {self.id}: {self.titulo}>"
-
 
 # ============================================
 # MODELO: ITINERARIO_DETALLES (ACTUALIZADO)

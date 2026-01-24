@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { itinerariosAPI, detallesAPI } from '../services/api';
 import LoadingSpinner from '../components/Layout/LoadingSpinner';
 import EvaluacionModal from '../components/EvaluacionModal';
+import GeneracionProgresivaIndicador from '../components/GeneracionProgresivaIndicador';
+
 
 const VisitaEnProgresoPage = () => {
   const { id } = useParams();
@@ -94,6 +96,8 @@ const VisitaEnProgresoPage = () => {
       console.error('❌ Error:', err);
     }
   };
+
+  
 
   // 🔥 NUEVO: Función para volver a la sala anterior
   const handleVolverSalaAnterior = async () => {

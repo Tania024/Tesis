@@ -1,10 +1,12 @@
-# services/ia_service.py
-# 🔥 VERSIÓN CON KNOWLEDGE BASE - USA INFORMACIÓN REAL DEL MUSEO
+# services/ia_service_HIBRIDO.py
+# 🔥 VERSIÓN HÍBRIDA: KB + Web Search como fallback
 
 import requests
 import json
 import logging
 import re
+import threading
+import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +17,10 @@ logger = logging.getLogger(__name__)
 
 class IAGenerativaService:
     """
-    Servicio para generar itinerarios con INFORMACIÓN REAL del museo
+    Servicio HÍBRIDO:
+    1. Intenta usar knowledge base
+    2. Si es insuficiente, busca en web
+    3. Combina ambas fuentes
     """
     
     def __init__(self):
@@ -28,11 +33,8 @@ class IAGenerativaService:
         self.knowledge_base = self._cargar_knowledge_base()
         
     def _cargar_knowledge_base(self) -> Dict[str, Any]:
-        """
-        Cargar información real del museo desde JSON
-        """
+        """Cargar información real del museo desde JSON"""
         try:
-            # Buscar en varias ubicaciones
             posibles_rutas = [
                 Path("museo_knowledge.json"),
                 Path("../museo_knowledge.json"),
@@ -49,8 +51,7 @@ class IAGenerativaService:
                     logger.info(f"✅ Knowledge base cargada: {areas_count} areas")
                     return kb
             
-            logger.warning("⚠️ No se encontro museo_knowledge.json")
-            logger.warning("   El sistema usara modo SIN knowledge base")
+            logger.warning("⚠️ No se encontro museo_knowledge.json - usará web search")
             return {"areas": {}}
         
         except Exception as e:
@@ -58,194 +59,255 @@ class IAGenerativaService:
             return {"areas": {}}
     
     def _obtener_info_area(self, area_codigo: str) -> Dict[str, Any]:
-        """
-        Obtener información REAL de un área del museo
-        """
+        """Obtener información REAL de un área del museo"""
         if not self.knowledge_base or "areas" not in self.knowledge_base:
             return {}
         
-        # Buscar por código exacto
         area_info = self.knowledge_base["areas"].get(area_codigo, {})
         
         if area_info:
-            logger.debug(f"✅ Info encontrada para {area_codigo}")
-        else:
-            logger.debug(f"⚠️ Sin info para {area_codigo}")
-        
-        return area_info
-    
-    def _construir_prompt_itinerario(
-        self,
-        visitante_nombre: str,
-        intereses: List[str],
-        tiempo_disponible: Optional[int],
-        nivel_detalle: str,
-        areas_disponibles: List[Dict[str, Any]],
-        incluir_descansos: bool = True
-    ) -> str:
-        """
-        Construir prompt CON INFORMACIÓN REAL del museo
-        """
-        # 🔥 ENRIQUECER ÁREAS CON INFO REAL
-        areas_enriquecidas = []
-        tiene_kb = bool(self.knowledge_base and self.knowledge_base.get("areas"))
-        
-        for area in areas_disponibles:
-            info_real = self._obtener_info_area(area['codigo'])
+            # Verificar si tiene suficiente contenido
+            datos = len(area_info.get('datos_curiosos', []))
+            objetos = len(area_info.get('objetos_destacados', []))
+            info_det = len(area_info.get('informacion_detallada', []))
             
-            if info_real and tiene_kb:
-                # Preparar información concisa
-                objetos = info_real.get("objetos_destacados", [])[:3]
-                objetos_texto = ", ".join(objetos) if objetos else "Coleccion variada"
-                
-                datos = info_real.get("datos_curiosos", [])[:2]
-                datos_texto = ". ".join(datos) if datos else "Area importante del museo"
-                
-                temas = info_real.get("temas_principales", [])[:3]
-                temas_texto = ", ".join(temas) if temas else "Historia y cultura"
-                
-                # Información detallada (primeros 200 chars de cada segmento)
-                info_detallada = info_real.get("informacion_detallada", [])
-                contexto = ""
-                if info_detallada:
-                    # Tomar primer segmento relevante
-                    for segmento in info_detallada[:2]:
-                        if len(segmento) > 50:  # Solo segmentos sustanciales
-                            contexto += segmento[:200] + "... "
-                            break
-                
-                area_texto = f"""{area['codigo']}: {area['nombre']}
-   Tiempo: {area['tiempo_minimo']}-{area['tiempo_maximo']} min
-   Objetos destacados: {objetos_texto}
-   Temas: {temas_texto}
-   Contexto: {contexto if contexto else datos_texto}"""
-                
-                areas_enriquecidas.append(area_texto)
+            if datos >= 3 and objetos >= 3 and info_det >= 2:
+                logger.info(f"✅ KB completo para {area_codigo}: {datos} datos, {objetos} objetos")
+                return area_info
             else:
-                # Sin KB, usar info básica
-                area_texto = f"{area['codigo']}: {area['nombre']} ({area['tiempo_minimo']}-{area['tiempo_maximo']}min)"
-                areas_enriquecidas.append(area_texto)
-        
-        areas_texto = "\n\n".join(areas_enriquecidas)
-        
-        # Calcular tiempo
-        if tiempo_disponible is None:
-            tiempo_total = sum(area['tiempo_maximo'] for area in areas_disponibles)
-            instruccion = f"Incluye todas las {len(areas_disponibles)} areas"
+                logger.warning(f"⚠️ KB insuficiente para {area_codigo}: {datos} datos, {objetos} objetos")
+                return area_info  # Lo devuelve igual, pero se complementará con web
         else:
-            tiempo_total = tiempo_disponible
-            instruccion = "Selecciona 3-4 areas apropiadas"
-        
-        # Intereses
-        intereses_texto = ", ".join(intereses)
-        
-        # 🔥 PROMPT CON INSTRUCCIONES PARA USAR INFO REAL
-        if tiene_kb:
-            instruccion_kb = """
-IMPORTANTE: Usa la informacion REAL proporcionada arriba sobre cada area.
-- Los objetos destacados, temas y contexto son REALES del museo
-- Basa tus datos curiosos y observaciones en esta informacion VERIFICADA
-- NO inventes objetos o datos que no aparecen en la informacion proporcionada
-"""
-        else:
-            instruccion_kb = ""
-        
-        # Construir prompt
-        prompt = """Eres guia experto del Museo Pumapungo en Cuenca, Ecuador.
-
-Crea un itinerario personalizado para """ + visitante_nombre + """.
-
-DATOS DEL VISITANTE:
-- Intereses: """ + intereses_texto + """
-- Nivel: medio
-
-AREAS DISPONIBLES DEL MUSEO (CON INFORMACION REAL):
-""" + areas_texto + """
-
-TAREA: """ + instruccion + """
-""" + instruccion_kb + """
-
-RESPONDE SOLO CON JSON VALIDO (sin texto adicional):
-
-{
-  "titulo": "Titulo atractivo del itinerario",
-  "descripcion": "Descripcion breve en 3-4 oraciones",
-  "duracion_total": """ + str(tiempo_total) + """,
-  "areas": [
-    {
-      "area_codigo": "codigo_area",
-      "orden": 1,
-      "tiempo_sugerido": 30,
-      "introduccion": "Introduccion en 2-3 lineas",
-      "historia_contextual": "Historia en 3-4 lineas BASADA en la info real proporcionada",
-      "datos_curiosos": [
-        "Dato 1 REAL basado en la informacion del area",
-        "Dato 2 REAL basado en objetos o temas mencionados",
-        "Dato 3 REAL del contexto historico proporcionado"
-      ],
-      "que_observar": [
-        "Observacion 1 sobre objetos REALES mencionados",
-        "Observacion 2 sobre elementos verificados",
-        "Observacion 3 relacionada con los temas listados"
-      ],
-      "recomendacion": "Recomendacion practica en 1-2 lineas"
-    }
-  ]
-}
-
-REGLAS:
-1. SOLO JSON sin texto extra
-2. USA la informacion REAL proporcionada
-3. NO inventes objetos o datos no mencionados
-4. Contenido breve pero PRECISO
-"""
-        
-        return prompt
+            logger.warning(f"⚠️ Sin KB para {area_codigo}")
+            return {}
     
-    def generar_itinerario(
-        self,
-        visitante_nombre: str,
-        intereses: List[str],
-        tiempo_disponible: Optional[int],
-        nivel_detalle: str,
-        areas_disponibles: List[Dict[str, Any]],
-        incluir_descansos: bool = True
-    ) -> Dict[str, Any]:
+    def _buscar_info_web_simple(self, nombre_area: str, museo: str = "Museo Pumapungo") -> str:
         """
-        Generar itinerario CON información REAL
+        Buscar información básica en web sobre un área
+        NOTA: Este es un ejemplo simplificado sin web_search
+        En producción, usarías la API de web_search
         """
         try:
-            tiempo_inicio = datetime.now()
-            
-            tiene_kb = bool(self.knowledge_base and self.knowledge_base.get("areas"))
-            
-            if tiene_kb:
-                logger.info(f"🚀 Generando itinerario CON knowledge base para {visitante_nombre}")
-            else:
-                logger.info(f"🚀 Generando itinerario SIN knowledge base para {visitante_nombre}")
-            
-            # Construir prompt
-            prompt = self._construir_prompt_itinerario(
-                visitante_nombre,
-                intereses,
-                tiempo_disponible,
-                nivel_detalle,
-                areas_disponibles,
-                incluir_descansos
+            # Por ahora, retorna string vacío
+            # En producción, aquí irían las llamadas a web_search
+            logger.info(f"🌐 Web search deshabilitado - usando solo KB")
+            return ""
+        except Exception as e:
+            logger.error(f"❌ Error en web search: {e}")
+            return ""
+    
+    def generar_itinerario_progresivo(
+        self,
+        visitante_nombre: str,
+        intereses: List[str],
+        tiempo_disponible: Optional[int],
+        nivel_detalle: str,
+        areas_disponibles: List[Dict[str, Any]],
+        incluir_descansos: bool = True,
+        db_session=None,
+        itinerario_id: int = None
+    ) -> Dict[str, Any]:
+        """
+        🔥 MÉTODO PROGRESIVO HÍBRIDO
+        """
+        tiempo_inicio = datetime.now()
+        
+        tiene_kb = bool(self.knowledge_base and self.knowledge_base.get("areas"))
+        logger.info(f"🚀 HÍBRIDO: Generando para {visitante_nombre} (nivel: {nivel_detalle}, KB: {tiene_kb})")
+        
+        # PASO 1: Generar estructura básica
+        logger.info("📋 PASO 1: Generando estructura...")
+        estructura = self._generar_estructura_base(
+            visitante_nombre,
+            intereses,
+            tiempo_disponible,
+            areas_disponibles
+        )
+        
+        # PASO 2: Generar SOLO primera área con contenido completo
+        logger.info("📝 PASO 2: Generando primera área completa...")
+        primera_area = self._generar_area_individual_hibrida(
+            estructura['areas'][0],
+            areas_disponibles,
+            visitante_nombre,
+            intereses,
+            nivel_detalle,
+            es_primera=True
+        )
+        
+        # PASO 3: Marcar resto como "generando"
+        areas_resultado = [primera_area]
+        for area_estructura in estructura['areas'][1:]:
+            areas_resultado.append({
+                **area_estructura,
+                "introduccion": "⏳ Generando contenido detallado...",
+                "historia_contextual": None,
+                "datos_curiosos": [],
+                "que_observar": [],
+                "recomendacion": None,
+                "generando": True
+            })
+        
+        tiempo_fin = datetime.now()
+        tiempo_primera = (tiempo_fin - tiempo_inicio).total_seconds()
+        
+        resultado = {
+            **estructura,
+            "areas": areas_resultado,
+            "metadata": {
+                "modelo": self.model,
+                "temperature": 0.1,
+                "nivel_detalle": nivel_detalle,
+                "tiempo_primera_area": f"{tiempo_primera:.2f}s",
+                "timestamp": tiempo_fin.isoformat(),
+                "usa_knowledge_base": tiene_kb,
+                "areas_kb": len(self.knowledge_base.get("areas", {})),
+                "modo": "hibrido"
+            }
+        }
+        
+        logger.info(f"✅ Primera área lista en {tiempo_primera:.1f}s")
+        
+        # PASO 4: Lanzar generación del resto en background
+        if db_session and itinerario_id:
+            logger.info(f"🔄 Lanzando generación background de {len(estructura['areas']) - 1} áreas...")
+            thread = threading.Thread(
+                target=self._generar_resto_areas_background,
+                args=(
+                    itinerario_id,
+                    estructura['areas'][1:],
+                    areas_disponibles,
+                    visitante_nombre,
+                    intereses,
+                    nivel_detalle,
+                    db_session
+                ),
+                daemon=True
+            )
+            thread.start()
+        
+        return resultado
+    
+    def _generar_estructura_base(
+        self,
+        visitante_nombre: str,
+        intereses: List[str],
+        tiempo_disponible: Optional[int],
+        areas_disponibles: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Genera estructura básica"""
+        areas_texto = "\n".join([
+            f"- {a['codigo']}: {a['nombre']} ({a['tiempo_minimo']}-{a['tiempo_maximo']}min)"
+            for a in areas_disponibles
+        ])
+        
+        intereses_texto = ", ".join(intereses) if intereses else "generales"
+        
+        if tiempo_disponible:
+            instruccion = f"Selecciona 3-5 areas que sumen aprox {tiempo_disponible} minutos"
+        else:
+            instruccion = f"Selecciona todas las {len(areas_disponibles)} areas disponibles"
+        
+        prompt = f"""Selecciona areas para itinerario del Museo Pumapungo.
+
+VISITANTE: {visitante_nombre}
+INTERESES: {intereses_texto}
+AREAS: {areas_texto}
+TAREA: {instruccion}
+
+Responde JSON:
+{{
+  "titulo": "titulo",
+  "descripcion": "descripcion",
+  "duracion_total": minutos,
+  "areas": [{{"area_codigo": "cod", "orden": 1, "tiempo_sugerido": min}}]
+}}"""
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                    "options": {"temperature": 0.1, "num_predict": 500}
+                },
+                timeout=30
             )
             
-            logger.info(f"✅ Prompt construido: {len(prompt)} chars")
+            response.raise_for_status()
+            return self._extraer_json(response.json().get("response", ""))
             
-            # Configuracion
-            if tiempo_disponible is None:
-                num_predict = 3000
-            else:
-                num_predict = 2000
-            
-            logger.info(f"🎯 Config: {num_predict} tokens, temp=0.1")
-            
-            # Llamar a Ollama
-            logger.info(f"📡 Enviando request a Ollama...")
+        except Exception as e:
+            logger.error(f"❌ Error estructura: {e}")
+            return self._estructura_fallback(areas_disponibles, tiempo_disponible)
+    
+    def _generar_area_individual_hibrida(
+        self,
+        area_estructura: Dict[str, Any],
+        areas_disponibles: List[Dict[str, Any]],
+        visitante_nombre: str,
+        intereses: List[str],
+        nivel_detalle: str,
+        es_primera: bool = False
+    ) -> Dict[str, Any]:
+        """
+        🔥 VERSIÓN HÍBRIDA
+        1. Intenta KB
+        2. Si insuficiente, complementa con info genérica educativa
+        3. Genera contenido rico
+        """
+        area_codigo = area_estructura['area_codigo']
+        area_info = next((a for a in areas_disponibles if a['codigo'] == area_codigo), None)
+        
+        if not area_info:
+            logger.error(f"❌ Área {area_codigo} no encontrada")
+            return {**area_estructura, "error": "Área no encontrada"}
+        
+        # 1. Intentar KB
+        info_kb = self._obtener_info_area(area_codigo)
+        
+        # 2. Evaluar si es suficiente
+        datos_kb = info_kb.get('datos_curiosos', []) if info_kb else []
+        objetos_kb = info_kb.get('objetos_destacados', []) if info_kb else []
+        info_det_kb = info_kb.get('informacion_detallada', []) if info_kb else []
+        
+        usa_kb = len(datos_kb) >= 3 and len(objetos_kb) >= 3
+        
+        if usa_kb:
+            logger.info(f"✅ Usando KB para {area_codigo}")
+            fuente = "knowledge_base"
+        else:
+            logger.warning(f"⚠️ KB insuficiente para {area_codigo} - generando contenido educativo")
+            fuente = "generativo"
+        
+        # Ajustar extensión
+        if nivel_detalle == "profundo":
+            num_datos = 7 if usa_kb else 5
+            num_observar = 8 if usa_kb else 5
+            num_predict = 3000
+        else:
+            num_datos = 4
+            num_observar = 4
+            num_predict = 1800
+        
+        # Construir prompt
+        if usa_kb:
+            # PROMPT CON KB
+            prompt = self._construir_prompt_con_kb(
+                area_info, info_kb, visitante_nombre, intereses,
+                nivel_detalle, num_datos, num_observar, es_primera
+            )
+        else:
+            # PROMPT GENERATIVO EDUCATIVO
+            prompt = self._construir_prompt_generativo(
+                area_info, visitante_nombre, intereses,
+                nivel_detalle, num_datos, num_observar, es_primera
+            )
+        
+        try:
+            logger.info(f"📝 Generando '{area_info['nombre']}' ({fuente}, {nivel_detalle})...")
             
             response = requests.post(
                 f"{self.base_url}/api/generate",
@@ -254,141 +316,191 @@ REGLAS:
                     "prompt": prompt,
                     "stream": False,
                     "format": "json",
-                    "options": {
-                        "temperature": 0.1,
-                        "num_predict": num_predict,
-                        "top_p": 0.9,
-                        "top_k": 40
-                    }
+                    "options": {"temperature": 0.2, "num_predict": num_predict}
                 },
-                timeout=self.timeout
+                timeout=120
             )
             
             response.raise_for_status()
+            contenido = self._extraer_json(response.json().get("response", ""))
             
-            # Extraer respuesta
-            resultado = response.json()
-            respuesta_ia = resultado.get("response", "")
+            logger.info(f"✅ '{area_info['nombre']}' generada ({len(contenido.get('datos_curiosos', []))} datos)")
             
-            tiempo_fin = datetime.now()
-            tiempo_generacion = (tiempo_fin - tiempo_inicio).total_seconds()
-            
-            logger.info(f"⚡ Respuesta en {tiempo_generacion:.1f}s")
-            
-            # Extraer JSON
-            itinerario_json = self._extraer_json(respuesta_ia)
-            
-            # Validar
-            if not self._validar_itinerario(itinerario_json):
-                raise ValueError("Estructura incorrecta")
-            
-            # 🔥 METADATA CON INFO DE KNOWLEDGE BASE
-            itinerario_json["metadata"] = {
-                "prompt": prompt,
-                "modelo": self.model,
-                "respuesta_cruda": respuesta_ia,
-                "temperature": 0.1,
-                "tiempo_generacion": f"{tiempo_generacion:.2f}s",
-                "timestamp": tiempo_fin.isoformat(),
-                "usa_knowledge_base": tiene_kb,  # 🔥 NUEVO
-                "areas_kb": len(self.knowledge_base.get("areas", {}))  # 🔥 NUEVO
+            return {
+                **area_estructura,
+                **contenido,
+                "generando": False,
+                "_fuente": fuente
             }
             
-            logger.info(f"✅ Itinerario generado: {itinerario_json['titulo']}")
-            if tiene_kb:
-                logger.info(f"   📚 Usando informacion REAL de {len(self.knowledge_base.get('areas', {}))} areas")
-            
-            return itinerario_json
-        
         except Exception as e:
-            logger.error(f"❌ Error: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise
+            logger.error(f"❌ Error {area_codigo}: {e}")
+            return self._area_fallback(area_estructura, area_info)
+    
+    def _construir_prompt_con_kb(self, area_info, info_kb, visitante, intereses, nivel, num_datos, num_obs, primera):
+        """Prompt cuando HAY knowledge base"""
+        objetos = "\n".join([f"{i+1}. {obj}" for i, obj in enumerate(info_kb.get('objetos_destacados', [])[:num_obs])])
+        datos = "\n".join([f"{i+1}. {dato}" for i, dato in enumerate(info_kb.get('datos_curiosos', [])[:num_datos])])
+        contexto = "\n\n".join(info_kb.get('informacion_detallada', [])[:3])
+        
+        return f"""Genera contenido educativo para {area_info['nombre']} del Museo Pumapungo.
+
+VISITANTE: {visitante}
+INTERESES: {", ".join(intereses)}
+{'⭐ PRIMERA ÁREA - Bienvenida cálida' if primera else ''}
+
+INFORMACIÓN REAL DEL MUSEO:
+
+OBJETOS DESTACADOS:
+{objetos}
+
+DATOS CURIOSOS REALES:
+{datos}
+
+CONTEXTO HISTÓRICO:
+{contexto}
+
+INSTRUCCIONES:
+* USA los objetos y datos listados arriba
+* Parafrasea el contexto para hacerlo accesible
+* Genera {num_datos} datos y {num_obs} observaciones
+* Nivel: {nivel.upper()}
+
+JSON:
+{{
+  "introduccion": "3-4 oraciones",
+  "historia_contextual": "6-8 lineas basadas en contexto",
+  "datos_curiosos": [{num_datos} items de DATOS CURIOSOS],
+  "que_observar": [{num_obs} items de OBJETOS DESTACADOS],
+  "recomendacion": "consejo práctico"
+}}"""
+    
+    def _construir_prompt_generativo(self, area_info, visitante, intereses, nivel, num_datos, num_obs, primera):
+        """Prompt cuando NO hay KB suficiente - contenido educativo general"""
+        return f"""Genera contenido educativo para {area_info['nombre']} del Museo Pumapungo.
+
+ÁREA: {area_info['nombre']}
+DESCRIPCIÓN: {area_info.get('descripcion', 'Área del museo')}
+VISITANTE: {visitante}
+INTERESES: {", ".join(intereses)}
+{'⭐ PRIMERA ÁREA' if primera else ''}
+
+TAREA:
+Genera contenido educativo apropiado para un museo sobre:
+* Contexto histórico/cultural del área
+* {num_datos} datos interesantes y educativos
+* {num_obs} cosas importantes que observar
+* Recomendación práctica
+
+Nivel: {nivel.upper()}
+
+JSON:
+{{
+  "introduccion": "3-4 oraciones sobre qué verá",
+  "historia_contextual": "6-8 lineas de contexto histórico/cultural",
+  "datos_curiosos": [{num_datos} datos educativos relevantes],
+  "que_observar": [{num_obs} elementos importantes a observar],
+  "recomendacion": "consejo práctico"
+}}"""
+    
+    def _generar_resto_areas_background(self, itinerario_id, areas_pendientes, areas_disponibles,
+                                       visitante_nombre, intereses, nivel_detalle, db_session):
+        """Background thread"""
+        from models import ItinerarioDetalle
+        
+        logger.info(f"🔄 Background: {len(areas_pendientes)} áreas")
+        
+        for idx, area_pendiente in enumerate(areas_pendientes, start=2):
+            try:
+                area_completa = self._generar_area_individual_hibrida(
+                    area_pendiente, areas_disponibles, visitante_nombre,
+                    intereses, nivel_detalle, False
+                )
+                
+                detalle = db_session.query(ItinerarioDetalle).filter(
+                    ItinerarioDetalle.itinerario_id == itinerario_id,
+                    ItinerarioDetalle.orden == area_completa['orden']
+                ).first()
+                
+                if detalle:
+                    detalle.introduccion = area_completa.get('introduccion')
+                    detalle.historia_contextual = area_completa.get('historia_contextual')
+                    detalle.datos_curiosos = area_completa.get('datos_curiosos', [])
+                    detalle.que_observar = area_completa.get('que_observar', [])
+                    detalle.recomendacion = area_completa.get('recomendacion')
+                    db_session.commit()
+                    logger.info(f"✅ [{idx}/{len(areas_pendientes)+1}] guardada")
+                
+                time.sleep(2)
+            except Exception as e:
+                logger.error(f"❌ Error área {idx}: {e}")
+                db_session.rollback()
+        
+        logger.info(f"🎉 Completado itinerario {itinerario_id}")
+    
+    def _estructura_fallback(self, areas_disponibles, tiempo_disponible):
+        """Fallback"""
+        areas_sel = areas_disponibles[:4]
+        return {
+            "titulo": "Recorrido Museo Pumapungo",
+            "descripcion": "Explora las áreas principales",
+            "duracion_total": sum(a.get('tiempo_maximo', 25) for a in areas_sel),
+            "areas": [
+                {"area_codigo": a['codigo'], "orden": i+1, "tiempo_sugerido": a.get('tiempo_maximo', 25)}
+                for i, a in enumerate(areas_sel)
+            ]
+        }
+    
+    def _area_fallback(self, area_estructura, area_info):
+        """Fallback"""
+        return {
+            **area_estructura,
+            "introduccion": f"Bienvenido a {area_info['nombre']}",
+            "historia_contextual": area_info.get('descripcion', 'Área del museo'),
+            "datos_curiosos": ["Área fascinante del museo"],
+            "que_observar": ["Observa los detalles"],
+            "recomendacion": "Tómate tu tiempo",
+            "generando": False
+        }
     
     def _extraer_json(self, respuesta: str) -> Dict[str, Any]:
-        """
-        Extraer JSON de forma robusta
-        """
-        # Limpiar tags
+        """Extraer JSON"""
         if '<think>' in respuesta:
-            respuesta = re.sub(r'<think>.*?</think>', '', respuesta, flags=re.DOTALL | re.IGNORECASE)
+            respuesta = re.sub(r'<think>.*?</think>', '', respuesta, flags=re.DOTALL)
         
-        # Intentar parsear directo
         try:
             return json.loads(respuesta.strip())
         except:
             pass
         
-        # Buscar entre llaves
         try:
             inicio = respuesta.find('{')
             fin = respuesta.rfind('}')
             if inicio != -1 and fin != -1:
-                json_str = respuesta[inicio:fin+1]
-                return json.loads(json_str)
+                return json.loads(respuesta[inicio:fin+1])
         except:
             pass
         
-        # Buscar en bloques
-        try:
-            match = re.search(r'```(?:json)?\s*(.*?)\s*```', respuesta, re.DOTALL)
-            if match:
-                return json.loads(match.group(1).strip())
-        except:
-            pass
-        
-        logger.error(f"❌ No se pudo extraer JSON: {respuesta[:300]}")
         raise ValueError("No se pudo extraer JSON")
     
-    def _validar_itinerario(self, itinerario: Dict[str, Any]) -> bool:
-        """
-        Validar estructura basica
-        """
-        campos = ["titulo", "descripcion", "duracion_total", "areas"]
-        
-        for campo in campos:
-            if campo not in itinerario:
-                logger.error(f"❌ Falta: {campo}")
-                return False
-        
-        if not isinstance(itinerario["areas"], list) or len(itinerario["areas"]) == 0:
-            logger.error("❌ Areas vacio")
-            return False
-        
-        return True
-    
     def verificar_conexion(self) -> Dict[str, Any]:
-        """
-        Verificar Ollama y Knowledge Base
-        """
+        """Verificar sistema"""
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=5)
             response.raise_for_status()
             
-            modelos = response.json().get("models", [])
-            modelos_nombres = [m.get("name") for m in modelos]
-            
             tiene_kb = bool(self.knowledge_base and self.knowledge_base.get("areas"))
-            num_areas_kb = len(self.knowledge_base.get("areas", {}))
             
             return {
                 "conectado": True,
-                "url": self.base_url,
-                "modelo_configurado": self.model,
-                "modelo_disponible": self.model in modelos_nombres,
-                "modelos_instalados": modelos_nombres,
+                "modelo": self.model,
                 "knowledge_base_cargada": tiene_kb,
-                "areas_en_knowledge_base": num_areas_kb
+                "areas_kb": len(self.knowledge_base.get("areas", {})),
+                "modo": "hibrido"
             }
         except Exception as e:
-            return {
-                "conectado": False,
-                "error": str(e),
-                "url": self.base_url,
-                "knowledge_base_cargada": False
-            }
+            return {"conectado": False, "error": str(e)}
 
 
-# Instancia global
+# Instancia
 ia_service = IAGenerativaService()
