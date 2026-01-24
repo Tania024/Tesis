@@ -196,17 +196,38 @@ class IAGenerativaService:
         areas_disponibles: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Genera estructura básica"""
+        
+        # 🔥 SI NO HAY LÍMITE DE TIEMPO, USAR TODAS LAS ÁREAS DIRECTAMENTE
+        if not tiempo_disponible:
+            logger.info(f"✅ Sin límite de tiempo - Usando TODAS las {len(areas_disponibles)} áreas")
+            
+            areas_estructura = []
+            duracion_total = 0
+            
+            for i, area in enumerate(areas_disponibles, 1):
+                tiempo_area = area.get('tiempo_maximo', 25)
+                areas_estructura.append({
+                    "area_codigo": area['codigo'],
+                    "orden": i,
+                    "tiempo_sugerido": tiempo_area
+                })
+                duracion_total += tiempo_area
+            
+            return {
+                "titulo": f"Recorrido Completo del Museo Pumapungo",
+                "descripcion": f"Itinerario personalizado para {visitante_nombre} que explora todas las áreas del museo. Este recorrido está diseñado para satisfacer los intereses en {', '.join(intereses) if intereses else 'cultura andina'} y ofrece una experiencia bien equilibrada.",
+                "duracion_total": duracion_total,
+                "areas": areas_estructura
+            }
+        
+        # SI HAY LÍMITE DE TIEMPO, USAR IA PARA SELECCIONAR
         areas_texto = "\n".join([
             f"- {a['codigo']}: {a['nombre']} ({a['tiempo_minimo']}-{a['tiempo_maximo']}min)"
             for a in areas_disponibles
         ])
         
         intereses_texto = ", ".join(intereses) if intereses else "generales"
-        
-        if tiempo_disponible:
-            instruccion = f"Selecciona 3-5 areas que sumen aprox {tiempo_disponible} minutos"
-        else:
-            instruccion = f"Selecciona todas las {len(areas_disponibles)} areas disponibles"
+        instruccion = f"Selecciona 3-5 areas que sumen aprox {tiempo_disponible} minutos. USA los tiempos indicados."
         
         prompt = f"""Selecciona areas para itinerario del Museo Pumapungo.
 
@@ -215,7 +236,7 @@ INTERESES: {intereses_texto}
 AREAS: {areas_texto}
 TAREA: {instruccion}
 
-Responde JSON:
+Responde SOLO JSON:
 {{
   "titulo": "titulo",
   "descripcion": "descripcion",
@@ -242,7 +263,7 @@ Responde JSON:
         except Exception as e:
             logger.error(f"❌ Error estructura: {e}")
             return self._estructura_fallback(areas_disponibles, tiempo_disponible)
-    
+
     def _generar_area_individual_hibrida(
         self,
         area_estructura: Dict[str, Any],

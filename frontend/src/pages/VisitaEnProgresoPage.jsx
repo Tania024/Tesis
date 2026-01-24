@@ -388,6 +388,19 @@ const VisitaEnProgresoPage = () => {
                       <span>Marcar como Visitada</span>
                     </button>
                     
+                    
+                    {/* 🔥 BOTÓN DE REFRESCAR */}
+                    <button
+                      onClick={() => {
+                        console.log('🔄 Refrescando contenido...');
+                        cargarItinerario();
+                      }}
+                      className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-md"
+                      title="Refrescar para ver contenido actualizado"
+                    >
+                      <span>🔄</span>
+                      <span>Refrescar</span>
+                    </button>
                     <button
                       onClick={() => handleSaltarArea(areaActual.id)}
                       className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
