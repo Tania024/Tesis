@@ -35,8 +35,8 @@ export const AuthProvider = ({ children }) => {
       visitante_id: userData.visitante_id,
       nombre: userData.nombre,
       email: userData.email,
-      picture: userData.picture || null,
       authenticated: true,
+      datos_completos: userData.datos_completos || false, // ✅ NUEVO
       loginTime: new Date().toISOString()
     };
 
@@ -47,12 +47,11 @@ export const AuthProvider = ({ children }) => {
     return userToSave;
   };
 
-  // Logout - NO usa navigate, el componente que llama logout debe hacerlo
+  // Logout - NO usa navigate
   const logout = () => {
     console.log('👋 Cerrando sesión');
     setUser(null);
     localStorage.removeItem('museo_user');
-    // NO navegamos aquí - el componente que llama logout lo hará
   };
 
   // Actualizar datos del usuario

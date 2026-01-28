@@ -332,6 +332,12 @@ export const visitantesAPI = {
    const response = await api.get('/visitantes/estadisticas');
     return response.data;
   },
+
+  // Actualizar perfil del visitante
+  update: async (id, datos) => {
+    const response = await api.put(`/visitantes/${id}/`, datos);
+    return response.data;
+  }
 }
 
 // ============================================

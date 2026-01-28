@@ -24,6 +24,7 @@ const Login = () => {
       const nombre = searchParams.get('nombre');
       const email = searchParams.get('email');
       const success = searchParams.get('success');
+      const datosCompletos = searchParams.get('datos_completos'); // ✅ NUEVO
       const errorParam = searchParams.get('error');
 
       // Si hay error en el callback
@@ -37,7 +38,7 @@ const Login = () => {
       // Si vienen los datos del usuario Y no se ha procesado antes
       if (visitanteId && nombre && email && success === 'true' && !callbackProcessed.current) {
         console.log('🎉 Callback de Google exitoso!');
-        console.log('📄 Datos recibidos:', { visitanteId, nombre, email });
+        console.log('📄 Datos recibidos:', { visitanteId, nombre, email, datosCompletos });
 
         // Marcar como procesado INMEDIATAMENTE
         callbackProcessed.current = true;
@@ -47,7 +48,8 @@ const Login = () => {
         const userData = {
           visitante_id: parseInt(visitanteId),
           nombre: nombre,
-          email: email
+          email: email,
+          datos_completos: datosCompletos === 'true' // ✅ NUEVO
         };
 
         // ✅ Guardar con AuthContext
@@ -59,10 +61,14 @@ const Login = () => {
         // Esperar un poco antes de redirigir
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        console.log('↪️ Redirigiendo a generar itinerario...');
-        
-        // Redirigir
-        navigate('/generar-itinerario', { replace: true });
+        // ✅ REDIRIGIR SEGÚN SI TIENE DATOS COMPLETOS
+        if (datosCompletos === 'true') {
+          console.log('↪️ Redirigiendo a generar itinerario...');
+          navigate('/generar-itinerario', { replace: true });
+        } else {
+          console.log('↪️ Redirigiendo a completar perfil...');
+          navigate('/completar-perfil', { replace: true });
+        }
       }
     };
 

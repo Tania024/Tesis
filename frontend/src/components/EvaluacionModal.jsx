@@ -62,10 +62,32 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
     };
 
     try {
+      // 1. Enviar evaluación
       await onSubmit(evaluacion);
+      
+      // 2. ✅ GENERAR Y ENVIAR CERTIFICADO
+      const token = localStorage.getItem('auth_token');
+      
+      const response = await fetch(`/api/itinerarios/${itinerarioId}/certificado`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error generando certificado');
+      }
+      
+      // 3. Mostrar mensaje de éxito
+      alert('¡Gracias por tu evaluación! 🎉\n\nTu certificado ha sido enviado a tu email.\n\n¡Esperamos verte pronto de nuevo!');
+      onClose();
+      
     } catch (error) {
-      console.error('Error enviando evaluación:', error);
-      alert('Error al enviar la evaluación. Intenta de nuevo.');
+      console.error('Error enviando evaluación o certificado:', error);
+      alert(`Error al procesar tu evaluación:\n${error.message}\n\nIntenta de nuevo.`);
     } finally {
       setEnviando(false);
     }
@@ -186,7 +208,7 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Enviando...
+                  Enviando evaluación...
                 </span>
               ) : (
                 'Enviar Evaluación'

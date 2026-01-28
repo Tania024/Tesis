@@ -11,6 +11,7 @@ import GenerarItinerarioPage from './pages/GenerarItinerarioPage';
 import MisItinerariosPage from './pages/MisItinerariosPage';
 import VerItinerarioPage from './pages/VerItinerarioPage'; 
 import VisitaEnProgresoPage from './pages/VisitaEnProgresoPage';
+import CompletarPerfilPage from './pages/CompletarPerfilPage';
 import AdminPage from './pages/AdminPage';
 
 // Componente para rutas protegidas
@@ -102,6 +103,15 @@ function App() {
                   <VisitaEnProgresoPage />
                 </ProtectedRoute>
               }
+            />
+
+            <Route 
+              path="/completar-perfil" 
+              element={
+                <ProtectedRoute>
+                  <CompletarPerfilPage />
+                  </ProtectedRoute>
+                } 
             />
             
             {/* ============================================ */}
