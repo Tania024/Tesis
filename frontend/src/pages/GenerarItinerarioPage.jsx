@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { itinerariosAPI, perfilesAPI } from '../services/api';
 import LoadingSpinner from '../components/Layout/LoadingSpinner';
+import ErrorModal from '../components/UI/ErrorModal';
 
 const GenerarItinerarioPage = () => {
   const navigate = useNavigate();
@@ -148,36 +149,31 @@ const GenerarItinerarioPage = () => {
       }
 
     } catch (err) {
-      console.error('❌ Error generando itinerario:', err);
-      console.error('Response data:', err.response?.data);
-      
-      // ✅ MANEJO CORRECTO DE ERRORES
-      let errorMessage = 'Error al generar el itinerario. Intenta de nuevo.';
-      
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-        
-        // Si detail es un array (errores de validación de Pydantic)
-        if (Array.isArray(detail)) {
-          errorMessage = detail.map(e => {
-            const field = e.loc?.join('.') || 'unknown';
-            const msg = e.msg || 'Error de validación';
-            return `${field}: ${msg}`;
-          }).join(', ');
-        } 
-        // Si detail es un string
-        else if (typeof detail === 'string') {
-          errorMessage = detail;
-        }
-        // Si detail es un objeto
-        else if (typeof detail === 'object') {
-          errorMessage = JSON.stringify(detail);
-        }
-      }
-      
-      setError(errorMessage);
-      setLoading(false);
+  console.error('❌ Error generando itinerario:', err);
+  console.error('Response data:', err.response?.data);
+  
+  let errorMessage = 'Error al generar el itinerario. Intenta de nuevo.';
+  
+  if (err.response?.data?.detail) {
+    const detail = err.response.data.detail;
+    
+    // ✅ EXTRACTOR INTELIGENTE: Toma SOLO el mensaje + horarios
+    if (typeof detail === 'object') {
+      // Combina mensaje + horarios si ambos existen
+      errorMessage = [
+        detail.mensaje || '',
+        detail.horarios ? `\n\n${detail.horarios}` : ''
+      ].filter(Boolean).join('');
+    } 
+    // Para otros casos (como strings)
+    else if (typeof detail === 'string') {
+      errorMessage = detail;
     }
+  }
+  
+  setError(errorMessage);
+  setLoading(false);
+}
   };
 
   if (loadingPerfil) {
@@ -237,17 +233,13 @@ const GenerarItinerarioPage = () => {
         {/* Card principal */}
         <div className="card">
           {/* Error */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <span className="text-xl text-red-600 flex-shrink-0">⚠️</span>
-                <div className="flex-1">
-                  <p className="font-semibold text-red-900 mb-1">Error al generar itinerario</p>
-                  <p className="text-sm text-red-700 whitespace-pre-wrap">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* ===== MODAL DE ERROR ELEGANTE ===== */}
+{error && (
+  <ErrorModal 
+    error={error} 
+    onClose={() => setError(null)} 
+  />
+)}
 
           {/* Intereses detectados */}
           <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">

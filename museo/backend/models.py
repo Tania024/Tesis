@@ -159,11 +159,11 @@ class Itinerario(Base):
     # Estado
     estado = Column(String(20), default='generado', index=True)
     fecha_generacion = Column(
-        DateTime(timezone=True),  
-        default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), 
+        default=lambda: datetime.now(timezone.utc) 
     )
-    fecha_inicio = Column(DateTime(timezone=True))
-    fecha_fin = Column(DateTime(timezone=True))
+    fecha_inicio = Column(DateTime(timezone=True), nullable=True)  
+    fecha_fin = Column(DateTime(timezone=True), nullable=True)
     
     # Feedback
     puntuacion = Column(Integer)  # 1-5
@@ -227,8 +227,8 @@ class ItinerarioDetalle(Base):
     skip = Column(Boolean, default=False)
     
     # Tiempos
-    hora_inicio = Column(DateTime(timezone=True))
-    hora_fin = Column(DateTime(timezone=True))
+    hora_inicio = Column(DateTime(timezone=True), nullable=True)  
+    hora_fin = Column(DateTime(timezone=True), nullable=True)
     
     # Relaciones
     itinerario = relationship("Itinerario", back_populates="detalles")

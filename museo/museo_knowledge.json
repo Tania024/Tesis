@@ -211,8 +211,8 @@
       ]
     },
     "MUSEO-01": {
-      "codigo": "MUSEO-01",
-      "nombre": "Historia del Museo Pumapungo",
+      "codigo": "TEMP-01",
+      "nombre": "Exhibición Temporal",
       "descripcion": "Información sobre la fundación y desarrollo del museo",
       "historia": "Creado por el Banco Central del Ecuador en los años 1970",
       "objetos_destacados": [
