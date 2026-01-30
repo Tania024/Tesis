@@ -1,6 +1,6 @@
 # routers/__init__.py
 # Exportar todos los routers
 
-from . import visitantes, perfiles, areas, itinerarios, itinerario_detalles, historial, ia, auth_google,evaluaciones
+from . import visitantes, perfiles, areas, itinerarios, itinerario_detalles, historial, ia, auth_google,evaluaciones,certificado
 
-__all__ = ["visitantes", "perfiles", "areas", "itinerarios", "itinerario_detalles", "historial", "ia", "auth_google","evaluaciones"]
+__all__ = ["visitantes", "perfiles", "areas", "itinerarios", "itinerario_detalles", "historial", "ia", "auth_google","evaluaciones",certificado]

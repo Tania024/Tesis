@@ -58,6 +58,16 @@ class Settings(BaseSettings):
     OLLAMA_TEMPERATURE: float = 0.25
     OLLAMA_MAX_TOKENS: int = 4000 
 
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USE_TLS: bool = True
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM_EMAIL: str = "lojanotania08@gmail.com"
+
+    class Config:
+        env_file = ".env"
+
     # ============================================
     # Google OAuth
     # ============================================

@@ -11,13 +11,11 @@ const CompletarPerfilPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Estado del formulario
+  // Estado del formulario (SOLO DATOS PERMANENTES)
   const [formData, setFormData] = useState({
     pais_origen: '',
     ciudad_origen: '',
     tipo_visitante: 'internacional',
-    tipo_entrada: 'individual',
-    acompanantes: 0,
     telefono: ''
   });
 
@@ -54,9 +52,8 @@ const CompletarPerfilPage = () => {
         pais_origen: formData.pais_origen,
         ciudad_origen: formData.ciudad_origen,
         tipo_visitante: formData.tipo_visitante,
-        tipo_entrada: formData.tipo_entrada,
-        acompanantes: formData.acompanantes,
         telefono: formData.telefono || null
+        // ❌ ELIMINADO: tipo_entrada y acompanantes
       });
 
       console.log('✅ Perfil actualizado:', updatedData);
@@ -90,7 +87,7 @@ const CompletarPerfilPage = () => {
             ¡Hola, {user?.nombre}! 👋
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Para crear tu itinerario perfecto, necesitamos algunos datos adicionales
+            Seria de gran ayuda si nos ayudas a rellenar estes datos
           </p>
         </div>
 
@@ -173,64 +170,6 @@ const CompletarPerfilPage = () => {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              {/* Tipo de Entrada */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  🎫 Tipo de Entrada <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {[
-                    { value: 'individual', label: 'Individual', icon: '👤' },
-                    { value: 'estudiante', label: 'Estudiante', icon: '🎓' },
-                    { value: 'adulto_mayor', label: 'Adulto Mayor', icon: '👴' },
-                    { value: 'grupo', label: 'Grupo', icon: '👥' }
-                  ].map((tipo) => (
-                    <button
-                      key={tipo.value}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, tipo_entrada: tipo.value })}
-                      className={`p-4 rounded-xl border-2 transition-all ${
-                        formData.tipo_entrada === tipo.value
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-2xl mb-2">{tipo.icon}</div>
-                      <div className="font-medium text-sm">{tipo.label}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Acompañantes */}
-              <div className="bg-blue-50 rounded-xl p-5">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  👨‍👩‍👧‍👦 ¿Viene con acompañantes?
-                </label>
-                <div className="flex items-center justify-center gap-6">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, acompanantes: Math.max(0, formData.acompanantes - 1) })}
-                    className="w-12 h-12 rounded-full border-2 border-gray-300 hover:border-primary-500 hover:bg-primary-50 transition-colors flex items-center justify-center text-xl font-bold"
-                  >
-                    -
-                  </button>
-                  <div className="text-4xl font-bold w-20 text-center">
-                    {formData.acompanantes}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, acompanantes: formData.acompanantes + 1 })}
-                    className="w-12 h-12 rounded-full border-2 border-gray-300 hover:border-primary-500 hover:bg-primary-50 transition-colors flex items-center justify-center text-xl font-bold"
-                  >
-                    +
-                  </button>
-                </div>
-                <p className="text-sm text-gray-600 mt-3 text-center">
-                  Incluye familiares, amigos o compañeros de viaje
-                </p>
               </div>
 
               {/* Teléfono (opcional) */}

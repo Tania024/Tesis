@@ -215,8 +215,7 @@ app.include_router(historial.router, prefix=f"{settings.API_V1_PREFIX}/historial
 app.include_router(ia.router, prefix=f"{settings.API_V1_PREFIX}/ia", tags=["Inteligencia Artificial"])
 app.include_router(auth_google.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["🔐 Autenticación Google (YouTube + Maps)"])
 app.include_router(evaluaciones.router, prefix=f"{settings.API_V1_PREFIX}/evaluaciones", tags=["Evaluaciones"])
-app.include_router(certificado.router, prefix=f"{settings.API_V1_PREFIX}/api", tags=["Certificados"])
-
+app.include_router(certificado.router, prefix=f"{settings.API_V1_PREFIX}", tags=["Certificados"])
 # ============================================
 # EJECUTAR APLICACIÓN
 # ============================================

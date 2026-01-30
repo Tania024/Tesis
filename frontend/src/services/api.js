@@ -233,7 +233,18 @@ export const itinerariosAPI = {
       console.error('❌ Error obteniendo estado:', error);
       throw error;
     }
-  }
+  },
+
+  generarCertificado: async (itinerarioId) => {
+    try {
+      const response = await api.post(`/itinerarios/${itinerarioId}/certificado`);
+      console.log('✅ Certificado generado:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error generando certificado:', error.response?.data || error);
+      throw error;
+    }
+  },
 };
 
 

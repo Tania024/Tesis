@@ -19,6 +19,14 @@ const GenerarItinerarioPage = () => {
   const [tiempoPersonalizado, setTiempoPersonalizado] = useState('');
   const [sinPrisa, setSinPrisa] = useState(false);
   const [nivelDetalle, setNivelDetalle] = useState('medio');
+  
+  // ✅ NUEVOS ESTADOS: Tipo de entrada y acompañantes
+  const [tipoEntrada, setTipoEntrada] = useState('individual');
+  const [acompanantes, setAcompanantes] = useState(0);
+  
+  // ✅ NUEVOS ESTADOS: Selección manual de áreas
+  const [seleccionManual, setSeleccionManual] = useState(false);
+  const [areasSeleccionadas, setAreasSeleccionadas] = useState([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -36,17 +44,23 @@ const GenerarItinerarioPage = () => {
       
       const data = await perfilesAPI.obtener(user.visitante_id);
       
-      
       console.log('✅ Perfil cargado:', data);
       
       if (data) {
         setPerfil(data);
+        
+        // ✅ INICIALIZAR ÁREAS SELECCIONADAS CON INTERESES DETECTADOS
+        if (data.intereses && data.intereses.length > 0) {
+          const areasIniciales = mapearInteresesAAreas(data.intereses);
+          setAreasSeleccionadas(areasIniciales);
+        }
       } else {
         setPerfil({
           intereses: ['cultura'],
           tiempo_disponible: null,
           nivel_detalle: 'medio'
         });
+        setAreasSeleccionadas(['ARQ-01', 'ETN-01', 'ART-01']); // Por defecto
       }
     } catch (err) {
       console.error('❌ Error cargando perfil:', err);
@@ -58,28 +72,158 @@ const GenerarItinerarioPage = () => {
           tiempo_disponible: null,
           nivel_detalle: 'medio'
         });
+        setAreasSeleccionadas(['ARQ-01', 'ETN-01', 'ART-01']);
       } else {
         setPerfil({
           intereses: [],
           tiempo_disponible: null,
           nivel_detalle: 'medio'
         });
+        setAreasSeleccionadas(['ARQ-01', 'ETN-01', 'ART-01']);
       }
     } finally {
       setLoadingPerfil(false);
     }
   };
 
+  // ✅ MAPEO DE INTERESES A ÁREAS
+  const mapearInteresesAAreas = (intereses) => {
+    const mapaInteresesAreas = {
+      arqueologia: ['ARQ-01', 'RUIN-01'],
+      etnografia: ['ETN-01'],
+      aves: ['AVE-01'],
+      plantas: ['BOT-01'],
+      arte: ['ART-01'],
+      historia: ['ARQ-01', 'RUIN-01'],
+      cultura: ['ARQ-01', 'ETN-01', 'ART-01']
+    };
+    
+    const areas = new Set();
+    intereses.forEach(interes => {
+      if (mapaInteresesAreas[interes]) {
+        mapaInteresesAreas[interes].forEach(area => areas.add(area));
+      }
+    });
+    
+    return Array.from(areas);
+  };
+
+  // ✅ MAPEO DE ÁREAS A INTERESES PARA EL BACKEND
+  const mapearAreasAIntereses = (areas) => {
+    const mapaAreasIntereses = {
+      'ARQ-01': ['arqueologia', 'historia'],
+      'ETN-01': ['etnografia'],
+      'AVE-01': ['aves'],
+      'BOT-01': ['plantas', 'biodiversidad'],
+      'ART-01': ['arte'],
+      'RUIN-01': ['arqueologia', 'historia'],
+      'TEMP-01': ['arte', 'cultura']
+    };
+    
+    const intereses = new Set();
+    areas.forEach(area => {
+      if (mapaAreasIntereses[area]) {
+        mapaAreasIntereses[area].forEach(interes => intereses.add(interes));
+      }
+    });
+    
+    return Array.from(intereses);
+  };
+
+  // ✅ TOGGLE DE SELECCIÓN MANUAL
+  const toggleSeleccionManual = () => {
+    setSeleccionManual(!seleccionManual);
+    
+    if (!seleccionManual) {
+      // Al activar selección manual, copiar intereses detectados
+      if (perfil?.intereses && perfil.intereses.length > 0) {
+        const areasIniciales = mapearInteresesAAreas(perfil.intereses);
+        setAreasSeleccionadas(areasIniciales);
+      }
+    }
+  };
+
+  // ✅ TOGGLE DE ÁREA
+  const toggleArea = (areaCode) => {
+    setAreasSeleccionadas(prev => {
+      if (prev.includes(areaCode)) {
+        return prev.filter(a => a !== areaCode);
+      } else {
+        return [...prev, areaCode];
+      }
+    });
+  };
+
+  // ✅ DEFINICIÓN DE ÁREAS DISPONIBLES
+  const AREAS_DISPONIBLES = [
+    { 
+      code: 'ARQ-01', 
+      nombre: 'Sala Arqueológica Cañari', 
+      icon: '🏺', 
+      color: 'bg-orange-100 text-orange-700',
+      desc: 'Descubre la historia prehispánica del pueblo Cañari'
+    },
+    { 
+      code: 'ETN-01', 
+      nombre: 'Sala Etnográfica', 
+      icon: '🎭', 
+      color: 'bg-purple-100 text-purple-700',
+      desc: 'Conoce las tradiciones y cultura de los pueblos andinos'
+    },
+    { 
+      code: 'AVE-01', 
+      nombre: 'Aviario de Aves Andinas', 
+      icon: '🦅', 
+      color: 'bg-blue-100 text-blue-700',
+      desc: 'Observa la diversidad de aves nativas de los Andes'
+    },
+    { 
+      code: 'BOT-01', 
+      nombre: 'Jardín Botánico', 
+      icon: '🌿', 
+      color: 'bg-green-100 text-green-700',
+      desc: 'Explora la flora nativa del Ecuador'
+    },
+    { 
+      code: 'ART-01', 
+      nombre: 'Sala de Arte Colonial', 
+      icon: '🎨', 
+      color: 'bg-red-100 text-red-700',
+      desc: 'Admira obras de arte del período colonial'
+    },
+    { 
+      code: 'RUIN-01', 
+      nombre: 'Parque Arqueológico Pumapungo', 
+      icon: '🏛️', 
+      color: 'bg-yellow-100 text-yellow-700',
+      desc: 'Recorre el parque para observar el antiguo complejo inca'
+    },
+    { 
+      code: 'TEMP-01', 
+      nombre: 'Exhibición Temporal', 
+      icon: '🎪', 
+      color: 'bg-pink-100 text-pink-700',
+      desc: 'Descubre exposiciones especiales y rotativas'
+    }
+  ];
+
   const handleGenerarItinerario = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      // Validar que al menos una área esté seleccionada
+      if (areasSeleccionadas.length === 0) {
+        setError('Por favor, selecciona al menos una área para visitar');
+        setLoading(false);
+        return;
+      }
+
       // Determinar tiempo final
       let tiempoFinal = null;
       
       if (sinPrisa) {
-        tiempoFinal = null; // Sin límite de tiempo
+        tiempoFinal = null;
       } else if (tiempoDisponible === 'personalizado' && tiempoPersonalizado) {
         tiempoFinal = parseInt(tiempoPersonalizado);
       } else if (tiempoDisponible) {
@@ -89,31 +233,10 @@ const GenerarItinerarioPage = () => {
       console.log('🤖 Generando itinerario...');
       console.log('Tiempo disponible:', tiempoFinal === null ? 'Sin límite' : `${tiempoFinal} minutos`);
       console.log('Nivel de detalle:', nivelDetalle);
-      console.log('Intereses:', perfil?.intereses || []);
+      console.log('Áreas seleccionadas:', areasSeleccionadas);
 
-      const MAPA_INTERESES = {
-        cultura: ['arqueologia', 'etnografia', 'historia', 'arte'],
-        naturaleza: ['aves', 'plantas', 'biodiversidad'],
-        historia: ['arqueologia', 'historia'],
-      };
-
-      // Asegurar que intereses sea un array de strings
-      const interesesArray = [];
-
-      if (Array.isArray(perfil?.intereses)) {
-        perfil.intereses.forEach(interes => {
-          if (MAPA_INTERESES[interes]) {
-            interesesArray.push(...MAPA_INTERESES[interes]);
-          } else {
-            interesesArray.push(interes);
-          }
-        });
-      }
-
-      // fallback seguro
-      if (interesesArray.length === 0) {
-        interesesArray.push('arqueologia');
-      }
+      // ✅ USAR ÁREAS SELECCIONADAS MANUALMENTE
+      const interesesArray = mapearAreasAIntereses(areasSeleccionadas);
 
       const MAPA_NIVEL_DETALLE = {
         basico: 'rapido',
@@ -121,24 +244,24 @@ const GenerarItinerarioPage = () => {
         detallado: 'profundo'
       };
   
-      // ✅ PAYLOAD CORREGIDO
+      // ✅ PAYLOAD CON ÁREAS SELECCIONADAS
       const payload = {
         visitante_id: user.visitante_id,
-        intereses: interesesArray.length > 0 ? interesesArray : ['cultura'],
+        intereses: interesesArray.length > 0 ? interesesArray : ['arqueologia'],
         tiempo_disponible: tiempoFinal,
         nivel_detalle: MAPA_NIVEL_DETALLE[nivelDetalle],
+        tipo_entrada: tipoEntrada,
+        acompanantes: acompanantes,
         incluir_descansos: tiempoFinal ? tiempoFinal > 90 : true,
         areas_evitar: []
       };
 
       console.log('📤 Payload enviado:', JSON.stringify(payload, null, 2));
 
-      // 🔥🔥🔥 CAMBIO CRÍTICO: Usar endpoint PROGRESIVO 🔥🔥🔥
       const response = await itinerariosAPI.generarProgresivo(user.visitante_id, payload);
       
       console.log('✅ Respuesta del backend:', response);
 
-      // Redirigir al itinerario generado
       const itinerarioId = response.id;
       
       if (itinerarioId) {
@@ -149,31 +272,28 @@ const GenerarItinerarioPage = () => {
       }
 
     } catch (err) {
-  console.error('❌ Error generando itinerario:', err);
-  console.error('Response data:', err.response?.data);
-  
-  let errorMessage = 'Error al generar el itinerario. Intenta de nuevo.';
-  
-  if (err.response?.data?.detail) {
-    const detail = err.response.data.detail;
-    
-    // ✅ EXTRACTOR INTELIGENTE: Toma SOLO el mensaje + horarios
-    if (typeof detail === 'object') {
-      // Combina mensaje + horarios si ambos existen
-      errorMessage = [
-        detail.mensaje || '',
-        detail.horarios ? `\n\n${detail.horarios}` : ''
-      ].filter(Boolean).join('');
-    } 
-    // Para otros casos (como strings)
-    else if (typeof detail === 'string') {
-      errorMessage = detail;
+      console.error('❌ Error generando itinerario:', err);
+      console.error('Response ', err.response?.data);
+      
+      let errorMessage = 'Error al generar el itinerario. Intenta de nuevo.';
+      
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        
+        if (typeof detail === 'object') {
+          errorMessage = [
+            detail.mensaje || '',
+            detail.horarios ? `\n\n${detail.horarios}` : ''
+          ].filter(Boolean).join('');
+        } 
+        else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      }
+      
+      setError(errorMessage);
+      setLoading(false);
     }
-  }
-  
-  setError(errorMessage);
-  setLoading(false);
-}
   };
 
   if (loadingPerfil) {
@@ -216,7 +336,7 @@ const GenerarItinerarioPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-3xl">
+      <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
@@ -233,13 +353,12 @@ const GenerarItinerarioPage = () => {
         {/* Card principal */}
         <div className="card">
           {/* Error */}
-          {/* ===== MODAL DE ERROR ELEGANTE ===== */}
-{error && (
-  <ErrorModal 
-    error={error} 
-    onClose={() => setError(null)} 
-  />
-)}
+          {error && (
+            <ErrorModal 
+              error={error} 
+              onClose={() => setError(null)} 
+            />
+          )}
 
           {/* Intereses detectados */}
           <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -263,6 +382,160 @@ const GenerarItinerarioPage = () => {
                 </span>
               )}
             </div>
+          </div>
+
+          {/* ✅ NUEVA SECCIÓN: Selección de Áreas */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span>🏛️</span>
+              <span>Selecciona las áreas que quieres visitar</span>
+            </h3>
+            
+            {/* Toggle para selección manual */}
+            <div className="mb-4 p-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={seleccionManual}
+                  onChange={toggleSeleccionManual}
+                  className="mt-1 w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                />
+                <div>
+                  <p className="font-semibold text-purple-900">
+                    ✨ Quiero seleccionar las áreas manualmente
+                  </p>
+                  <p className="text-sm text-purple-700 mt-1">
+                    {seleccionManual 
+                      ? 'Estás seleccionando áreas manualmente' 
+                      : 'Usaré tus intereses detectados para recomendarte áreas'}
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Grid de áreas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {AREAS_DISPONIBLES.map((area) => {
+                const isSelected = areasSeleccionadas.includes(area.code);
+                return (
+                  <button
+                    key={area.code}
+                    onClick={() => toggleArea(area.code)}
+                    disabled={!seleccionManual}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      isSelected
+                        ? `${area.color} border-purple-500 ring-2 ring-purple-500`
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    } ${!seleccionManual ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-3xl flex-shrink-0">{area.icon}</span>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{area.nombre}</div>
+                        <div className="text-sm text-gray-600 mt-1">{area.desc}</div>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div className="mt-2 flex items-center gap-1 text-green-600 text-sm font-medium">
+                        <span>✓</span>
+                        <span>Seleccionado</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mensaje de validación */}
+            {seleccionManual && areasSeleccionadas.length === 0 && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                <div className="flex items-start gap-2">
+                  <span className="text-xl">⚠️</span>
+                  <span>Debes seleccionar al menos una área para continuar</span>
+                </div>
+              </div>
+            )}
+
+            {/* Resumen de áreas seleccionadas */}
+            {areasSeleccionadas.length > 0 && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm font-medium text-green-800">
+                  📌 Áreas seleccionadas ({areasSeleccionadas.length}):
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {areasSeleccionadas.map((code) => {
+                    const area = AREAS_DISPONIBLES.find(a => a.code === code);
+                    return (
+                      <span
+                        key={code}
+                        className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium"
+                      >
+                        {area?.nombre || code}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ✅ NUEVA SECCIÓN: Tipo de Entrada */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span>🎫</span>
+              <span>Tipo de Entrada</span>
+            </h3>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { value: 'individual', label: 'Individual', icon: '👤' },
+                { value: 'estudiante', label: 'Estudiante', icon: '🎓' },
+                { value: 'adulto_mayor', label: 'Adulto Mayor', icon: '👴' },
+                { value: 'grupo', label: 'Grupo', icon: '👥' }
+              ].map((tipo) => (
+                <button
+                  key={tipo.value}
+                  onClick={() => setTipoEntrada(tipo.value)}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    tipoEntrada === tipo.value
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{tipo.icon}</div>
+                  <div className="font-medium text-sm">{tipo.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ✅ NUEVA SECCIÓN: Acompañantes */}
+          <div className="mb-8 bg-blue-50 rounded-xl p-5">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              👨‍👩‍👧‍👦 ¿Viene con acompañantes?
+            </label>
+            <div className="flex items-center justify-center gap-6">
+              <button
+                type="button"
+                onClick={() => setAcompanantes(Math.max(0, acompanantes - 1))}
+                className="w-12 h-12 rounded-full border-2 border-gray-300 hover:border-primary-500 hover:bg-primary-50 transition-colors flex items-center justify-center text-xl font-bold"
+              >
+                -
+              </button>
+              <div className="text-4xl font-bold w-20 text-center">
+                {acompanantes}
+              </div>
+              <button
+                type="button"
+                onClick={() => setAcompanantes(acompanantes + 1)}
+                className="w-12 h-12 rounded-full border-2 border-gray-300 hover:border-primary-500 hover:bg-primary-50 transition-colors flex items-center justify-center text-xl font-bold"
+              >
+                +
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mt-3 text-center">
+              Incluye familiares, amigos o compañeros de viaje
+            </p>
           </div>
 
           {/* Pregunta 1: Tiempo disponible */}
@@ -400,6 +673,15 @@ const GenerarItinerarioPage = () => {
             <h4 className="font-semibold text-gray-900 mb-2">📝 Resumen de tu itinerario:</h4>
             <ul className="space-y-1 text-sm text-gray-700">
               <li>
+                <span className="font-medium">Áreas:</span> {areasSeleccionadas.length} seleccionadas
+              </li>
+              <li>
+                <span className="font-medium">Entrada:</span> {tipoEntrada.charAt(0).toUpperCase() + tipoEntrada.slice(1)}
+              </li>
+              <li>
+                <span className="font-medium">Acompañantes:</span> {acompanantes} {acompanantes === 1 ? 'persona' : 'personas'}
+              </li>
+              <li>
                 <span className="font-medium">Tiempo:</span>{' '}
                 {sinPrisa 
                   ? 'Sin límite (itinerario completo)' 
@@ -412,16 +694,13 @@ const GenerarItinerarioPage = () => {
               <li>
                 <span className="font-medium">Detalle:</span> {nivelDetalle.charAt(0).toUpperCase() + nivelDetalle.slice(1)}
               </li>
-              <li>
-                <span className="font-medium">Intereses:</span> {perfil?.intereses?.join(', ') || 'General'}
-              </li>
             </ul>
           </div>
 
           {/* Botón generar */}
           <button
             onClick={handleGenerarItinerario}
-            disabled={!sinPrisa && !tiempoDisponible}
+            disabled={loading || (seleccionManual && areasSeleccionadas.length === 0)}
             className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="flex items-center justify-center gap-3">
@@ -430,9 +709,9 @@ const GenerarItinerarioPage = () => {
             </span>
           </button>
 
-          {!sinPrisa && !tiempoDisponible && (
-            <p className="text-center text-sm text-gray-500 mt-3">
-              Por favor, selecciona cuánto tiempo tienes disponible
+          {seleccionManual && areasSeleccionadas.length === 0 && (
+            <p className="text-center text-sm text-red-500 mt-3">
+              Por favor, selecciona al menos una área para continuar
             </p>
           )}
         </div>

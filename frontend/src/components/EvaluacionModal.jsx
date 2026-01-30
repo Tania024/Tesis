@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { itinerariosAPI } from '../services/api';
+
 
 const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
   const [calificacionGeneral, setCalificacionGeneral] = useState(null);
@@ -65,29 +67,26 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
       // 1. Enviar evaluación
       await onSubmit(evaluacion);
       
-      // 2. ✅ GENERAR Y ENVIAR CERTIFICADO
-      const token = localStorage.getItem('auth_token');
+      // 2. ✅ GENERAR Y ENVIAR CERTIFICADO (usando axios)
+      console.log('📨 Generando certificado para itinerario:', itinerarioId);
+      const response = await itinerariosAPI.generarCertificado(itinerarioId);
       
-      const response = await fetch(`/api/itinerarios/${itinerarioId}/certificado`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Error generando certificado');
-      }
+      console.log('✅ Certificado generado:', response);
       
       // 3. Mostrar mensaje de éxito
       alert('¡Gracias por tu evaluación! 🎉\n\nTu certificado ha sido enviado a tu email.\n\n¡Esperamos verte pronto de nuevo!');
       onClose();
       
     } catch (error) {
-      console.error('Error enviando evaluación o certificado:', error);
-      alert(`Error al procesar tu evaluación:\n${error.message}\n\nIntenta de nuevo.`);
+      console.error('❌ Error enviando evaluación o certificado:', error);
+      console.error('Response:', error.response?.data);
+      
+      // Mensaje de error más amigable
+      const errorMessage = error.response?.data?.detail || 
+                          error.message || 
+                          'Error al procesar tu evaluación. Intenta de nuevo.';
+      
+      alert(`Error:\n${errorMessage}`);
     } finally {
       setEnviando(false);
     }
