@@ -95,7 +95,17 @@ const GenerarItinerarioPage = () => {
       plantas: ['BOT-01'],
       arte: ['ART-01'],
       historia: ['ARQ-01', 'RUIN-01'],
-      cultura: ['ARQ-01', 'ETN-01', 'ART-01']
+      cultura: ['ARQ-01', 'ETN-01', 'ART-01'],
+
+      naturaleza: ['BOT-01', 'AVE-01'],      
+      biodiversidad: ['BOT-01', 'AVE-01'],   
+      plantas: ['BOT-01'],
+      aves: ['AVE-01'],
+      botanica: ['BOT-01'],                  
+      ornitologia: ['AVE-01'],               
+    
+    // Otros
+    temporal: ['TEMP-01']
     };
     
     const areas = new Set();
@@ -112,10 +122,10 @@ const GenerarItinerarioPage = () => {
   const mapearAreasAIntereses = (areas) => {
     const mapaAreasIntereses = {
       'ARQ-01': ['arqueologia', 'historia'],
-      'ETN-01': ['etnografia'],
-      'AVE-01': ['aves'],
-      'BOT-01': ['plantas', 'biodiversidad'],
-      'ART-01': ['arte'],
+      'ETN-01': ['etnografia', 'cultura'],
+      'AVE-01': ['aves', 'naturaleza', 'biodiversidad'],           
+      'BOT-01': ['plantas', 'naturaleza', 'biodiversidad'],        
+      'ART-01': ['arte', 'cultura'],
       'RUIN-01': ['arqueologia', 'historia'],
       'TEMP-01': ['arte', 'cultura']
     };
@@ -495,7 +505,14 @@ const GenerarItinerarioPage = () => {
               ].map((tipo) => (
                 <button
                   key={tipo.value}
-                  onClick={() => setTipoEntrada(tipo.value)}
+                  onClick={() => {setTipoEntrada(tipo.value);
+  
+                    if (tipo.value === 'individual') {
+                      setAcompanantes(0);
+                    } else if (tipo.value === 'grupo' && acompanantes === 0) {
+                      setAcompanantes(1);
+                    }
+                  }}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     tipoEntrada === tipo.value
                       ? 'border-primary-500 bg-primary-50'
@@ -510,32 +527,74 @@ const GenerarItinerarioPage = () => {
           </div>
 
           {/* ✅ NUEVA SECCIÓN: Acompañantes */}
-          <div className="mb-8 bg-blue-50 rounded-xl p-5">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              👨‍👩‍👧‍👦 ¿Viene con acompañantes?
-            </label>
+          <div className={`mb-8 rounded-xl p-5 transition-all ${
+  tipoEntrada === 'individual' 
+    ? 'bg-gray-100 border-2 border-gray-300'  // Gris si es individual
+    : 'bg-blue-50 border-2 border-blue-200'   // Azul si no es individual
+}`}>
+            <label className="block text-sm font-medium mb-3 flex items-center gap-2">
+    <span>👨‍👩‍👧‍👦</span>
+    <span>¿Viene con acompañantes?</span>
+    
+    {/* 🔥 BADGE CONDICIONAL */}
+    {tipoEntrada === 'individual' && (
+      <span className="ml-2 px-2 py-0.5 bg-gray-300 text-gray-700 text-xs font-semibold rounded-full">
+        No disponible
+      </span>
+    )}
+    {tipoEntrada === 'grupo' && (
+      <span className="ml-2 px-2 py-0.5 bg-blue-200 text-blue-700 text-xs font-semibold rounded-full">
+        Mínimo 1
+      </span>
+    )}
+  </label>
             <div className="flex items-center justify-center gap-6">
               <button
-                type="button"
-                onClick={() => setAcompanantes(Math.max(0, acompanantes - 1))}
-                className="w-12 h-12 rounded-full border-2 border-gray-300 hover:border-primary-500 hover:bg-primary-50 transition-colors flex items-center justify-center text-xl font-bold"
-              >
-                -
-              </button>
-              <div className="text-4xl font-bold w-20 text-center">
-                {acompanantes}
-              </div>
+  type="button"
+  onClick={() => {
+    const nuevoValor = Math.max(
+      tipoEntrada === 'grupo' ? 1 : 0,  // Mínimo 1 si es grupo, 0 si no
+      acompanantes - 1
+    );
+    setAcompanantes(nuevoValor);
+  }}
+  disabled={tipoEntrada === 'individual' || (tipoEntrada === 'grupo' && acompanantes <= 1)}
+  className={`w-12 h-12 rounded-full border-2 transition-colors flex items-center justify-center text-xl font-bold ${
+    tipoEntrada === 'individual' || (tipoEntrada === 'grupo' && acompanantes <= 1)
+      ? 'border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed'
+      : 'border-gray-300 hover:border-primary-500 hover:bg-primary-50'
+  }`}
+>
+  -
+</button>
+              <div className={`text-4xl font-bold w-20 text-center ${
+  tipoEntrada === 'individual' ? 'text-gray-400' : 'text-gray-900'
+}`}>
+  {acompanantes}
+</div>
               <button
-                type="button"
-                onClick={() => setAcompanantes(acompanantes + 1)}
-                className="w-12 h-12 rounded-full border-2 border-gray-300 hover:border-primary-500 hover:bg-primary-50 transition-colors flex items-center justify-center text-xl font-bold"
-              >
-                +
-              </button>
+  type="button"
+  onClick={() => setAcompanantes(acompanantes + 1)}
+  disabled={tipoEntrada === 'individual'}
+  className={`w-12 h-12 rounded-full border-2 transition-colors flex items-center justify-center text-xl font-bold ${
+    tipoEntrada === 'individual'
+      ? 'border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed'
+      : 'border-gray-300 hover:border-primary-500 hover:bg-primary-50'
+  }`}
+>
+  +
+</button>
             </div>
-            <p className="text-sm text-gray-600 mt-3 text-center">
-              Incluye familiares, amigos o compañeros de viaje
-            </p>
+            <p className={`text-sm mt-3 text-center ${
+  tipoEntrada === 'individual' ? 'text-gray-500' : 'text-gray-600'
+}`}>
+  {tipoEntrada === 'individual' 
+    ? 'Entrada individual no incluye acompañantes'
+    : tipoEntrada === 'grupo'
+      ? 'Los grupos requieren al menos 1 acompañante'
+      : 'Incluye familiares, amigos o compañeros de viaje'
+  }
+</p>
           </div>
 
           {/* Pregunta 1: Tiempo disponible */}

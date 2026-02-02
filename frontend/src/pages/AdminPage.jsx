@@ -1,5 +1,10 @@
 // src/pages/AdminPage.jsx
-// ✅ CON ESTADÍSTICAS DE EVALUACIONES
+// ✅ VERSIÓN COMPLETA CON TODO:
+// - Protección de emails
+// - Cálculo correcto de visitantes de hoy
+// - Sección de Evaluaciones
+// - Procesamiento de visitantes
+// - Logs de debugging
 
 import { useState, useEffect } from 'react';
 import { visitantesAPI, itinerariosAPI, historialAPI, evaluacionesAPI } from '../services/api';
@@ -14,7 +19,7 @@ const AdminPage = () => {
   const [estadisticasVisitantes, setEstadisticasVisitantes] = useState(null);
   const [estadisticasItinerarios, setEstadisticasItinerarios] = useState(null);
   const [estadisticasHoy, setEstadisticasHoy] = useState(null);
-  const [estadisticasEvaluaciones, setEstadisticasEvaluaciones] = useState(null); // 🔥 NUEVO
+  const [estadisticasEvaluaciones, setEstadisticasEvaluaciones] = useState(null); // 🔥 EVALUACIONES
   const [horasPico, setHorasPico] = useState([]);
   const [visitantesRecientes, setVisitantesRecientes] = useState([]);
 
@@ -31,26 +36,74 @@ const AdminPage = () => {
         visitantesStats,
         itinerariosStats,
         hoyStats,
-        evaluacionesStats, // 🔥 NUEVO
+        evaluacionesStats, // 🔥 EVALUACIONES
         pico,
-        visitantes
+        visitantesResponse
       ] = await Promise.all([
         visitantesAPI.estadisticas(),
         itinerariosAPI.estadisticas(),
         historialAPI.estadisticasHoy(),
-        evaluacionesAPI.obtenerEstadisticas(), // 🔥 NUEVO
+        evaluacionesAPI.obtenerEstadisticas(), // 🔥 EVALUACIONES
         historialAPI.horasPico(),
-        visitantesAPI.listar({ limit: 10, ordenar: '-fecha_registro' })
+        visitantesAPI.listar({ limit: 10 })
       ]);
+
+      // Logs de debug
+      console.log('═══════════════════════════════════════');
+      console.log('📊 DEBUG: Respuesta de visitantes');
+      console.log('Tipo:', typeof visitantesResponse);
+      console.log('Es array:', Array.isArray(visitantesResponse));
+      if (visitantesResponse && !Array.isArray(visitantesResponse)) {
+        console.log('Keys del objeto:', Object.keys(visitantesResponse));
+      }
+      console.log('═══════════════════════════════════════');
 
       setEstadisticasVisitantes(visitantesStats);
       setEstadisticasItinerarios(itinerariosStats);
-      setEstadisticasHoy(hoyStats);
-      setEstadisticasEvaluaciones(evaluacionesStats); // 🔥 NUEVO
+      setEstadisticasEvaluaciones(evaluacionesStats); // 🔥 EVALUACIONES
+
+      // Procesar visitantes con múltiples formatos
+      let visitantesArray = [];
+
+      if (Array.isArray(visitantesResponse)) {
+        visitantesArray = visitantesResponse;
+        console.log('✅ Formato detectado: Array directo');
+      } else if (visitantesResponse?.visitantes && Array.isArray(visitantesResponse.visitantes)) {
+        visitantesArray = visitantesResponse.visitantes;
+        console.log('✅ Formato detectado: {visitantes: [...]}');
+      } else if (visitantesResponse?.data && Array.isArray(visitantesResponse.data)) {
+        visitantesArray = visitantesResponse.data;
+        console.log('✅ Formato detectado: {data: [...]}');
+      } else if (visitantesResponse?.items && Array.isArray(visitantesResponse.items)) {
+        visitantesArray = visitantesResponse.items;
+        console.log('✅ Formato detectado: {items: [...]}');
+      } else {
+        console.warn('⚠️ Formato desconocido de respuesta');
+      }
+
+      console.log(`✅ Total visitantes procesados: ${visitantesArray.length}`);
+      if (visitantesArray.length > 0) {
+        console.log('👤 Primer visitante:', visitantesArray[0]);
+      }
+
+      setVisitantesRecientes(visitantesArray);
+
+      // 🔥 CALCULAR visitantes de hoy en el frontend
+      const visitantesHoyCalculado = calcularVisitantesHoy(visitantesArray);
+      console.log(`🌟 Visitantes de HOY (calculado en frontend): ${visitantesHoyCalculado}`);
+
+      // Actualizar estadísticas de hoy
+      setEstadisticasHoy({
+        visitantes_hoy: visitantesHoyCalculado,
+        itinerarios_activos: hoyStats?.itinerarios_activos || 0,
+        hora_entrada_promedio: hoyStats?.hora_entrada_promedio || null
+      });
+
       setHorasPico(pico);
-      setVisitantesRecientes(visitantes.visitantes || []);
+
     } catch (err) {
-      console.error('Error al cargar estadísticas:', err);
+      console.error('❌ Error al cargar estadísticas:', err);
+      console.error('Error completo:', err.response?.data || err.message);
       setError('No se pudieron cargar las estadísticas del museo.');
     } finally {
       setLoading(false);
@@ -76,7 +129,74 @@ const AdminPage = () => {
     return tipos[tipo] || tipo;
   };
 
-  // 🔥 NUEVO: Obtener emoji según calificación
+  // 🔥 Función para proteger privacidad de emails
+  const ofuscarEmail = (email) => {
+    if (!email || typeof email !== 'string') {
+      return 'N/A';
+    }
+
+    const partes = email.split('@');
+    if (partes.length !== 2) {
+      return email;
+    }
+
+    const [usuario, dominio] = partes;
+
+    let usuarioOfuscado;
+    if (usuario.length <= 3) {
+      usuarioOfuscado = usuario.charAt(0) + '***';
+    } else if (usuario.length <= 6) {
+      usuarioOfuscado = usuario.substring(0, 2) + '***';
+    } else {
+      usuarioOfuscado = usuario.substring(0, 3) + '***';
+    }
+
+    return `${usuarioOfuscado}@${dominio}`;
+  };
+
+  // 🔥 FUNCIÓN CORREGIDA: Calcular visitantes de hoy (sin problemas de timezone)
+  const calcularVisitantesHoy = (visitantes) => {
+    if (!visitantes || visitantes.length === 0) {
+      console.log('⚠️ No hay visitantes para calcular');
+      return 0;
+    }
+
+    // Obtener fecha de hoy (solo día/mes/año, sin hora)
+    const ahora = new Date();
+    const hoyDia = ahora.getDate();
+    const hoyMes = ahora.getMonth();
+    const hoyAnio = ahora.getFullYear();
+
+    console.log(`📅 Fecha de HOY: ${hoyDia}/${hoyMes + 1}/${hoyAnio}`);
+
+    const visitantesDeHoy = visitantes.filter(v => {
+      if (!v.fecha_registro) {
+        console.log('⚠️ Visitante sin fecha_registro:', v.nombre);
+        return false;
+      }
+      
+      const fechaVisitante = new Date(v.fecha_registro);
+      const visitanteDia = fechaVisitante.getDate();
+      const visitanteMes = fechaVisitante.getMonth();
+      const visitanteAnio = fechaVisitante.getFullYear();
+      
+      const esHoy = (
+        visitanteDia === hoyDia &&
+        visitanteMes === hoyMes &&
+        visitanteAnio === hoyAnio
+      );
+
+      console.log(`👤 ${v.nombre}: ${visitanteDia}/${visitanteMes + 1}/${visitanteAnio} → ${esHoy ? '✅ ES HOY' : '❌ NO ES HOY'}`);
+      
+      return esHoy;
+    });
+
+    console.log(`🌟 RESULTADO: ${visitantesDeHoy.length} visitante(s) de hoy`);
+    
+    return visitantesDeHoy.length;
+  };
+
+  // 🔥 Obtener emoji según calificación
   const obtenerEmojiCalificacion = (calificacion) => {
     if (calificacion >= 4.5) return '🤩';
     if (calificacion >= 3.5) return '😊';
@@ -85,7 +205,7 @@ const AdminPage = () => {
     return '😡';
   };
 
-  // 🔥 NUEVO: Obtener color según porcentaje
+  // 🔥 Obtener color según porcentaje
   const obtenerColorPorcentaje = (porcentaje) => {
     if (porcentaje >= 80) return 'bg-green-500';
     if (porcentaje >= 60) return 'bg-blue-500';
@@ -199,7 +319,7 @@ const AdminPage = () => {
           </div>
         </div>
 
-        {/* 🔥 NUEVA SECCIÓN: Estadísticas Detalladas de Evaluaciones */}
+        {/* 🔥 SECCIÓN: Estadísticas Detalladas de Evaluaciones */}
         {estadisticasEvaluaciones && estadisticasEvaluaciones.total_evaluaciones > 0 && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -342,7 +462,7 @@ const AdminPage = () => {
           </div>
         )}
 
-        {/* Resto del código igual... (Distribución de Visitantes, Horas Pico, etc.) */}
+        {/* Fila 2: Estadísticas Detalladas */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Distribución por Tipo de Visitante */}
           <div className="bg-white rounded-xl shadow-md p-6">
@@ -465,9 +585,15 @@ const AdminPage = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">
-                No hay datos de horas pico disponibles
-              </p>
+              <div className="text-center py-8">
+                <div className="text-4xl mb-3">⏰</div>
+                <p className="text-gray-600 font-medium mb-2">
+                  Aún no hay suficientes datos
+                </p>
+                <p className="text-gray-500 text-sm">
+                  Las horas pico se calcularán automáticamente cuando haya más visitas registradas
+                </p>
+              </div>
             )}
           </div>
 
@@ -547,8 +673,8 @@ const AdminPage = () => {
                       <td className="py-3 px-4 text-sm text-gray-900">
                         {visitante.nombre}
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {visitante.email}
+                      <td className="py-3 px-4 text-sm text-gray-600 font-mono">
+                        {ofuscarEmail(visitante.email)}
                       </td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${

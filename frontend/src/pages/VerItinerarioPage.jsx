@@ -144,9 +144,6 @@ const VerItinerarioPage = () => {
             
             <div className="text-right">
               <div className="text-sm text-gray-600">Generado</div>
-              <div className="font-medium text-gray-900">
-                {formatearFecha(itinerario.fecha_generacion)}
-              </div>
             </div>
           </div>
 

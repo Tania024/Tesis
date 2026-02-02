@@ -16,7 +16,11 @@ const CompletarPerfilPage = () => {
     pais_origen: '',
     ciudad_origen: '',
     tipo_visitante: 'internacional',
-    telefono: ''
+    telefono: '',
+    tipo_visita: 'individual', // 'individual' o 'grupo'
+    edad: '', // Para visitas individuales
+    edad_min: '', // Para grupos
+    edad_max: '' // Para grupos
   });
 
   // ✅ PAÍSES COMUNES
@@ -47,14 +51,45 @@ const CompletarPerfilPage = () => {
         return;
       }
 
-      // ✅ ACTUALIZAR PERFIL EN BACKEND
-      const updatedData = await visitantesAPI.update(user.visitante_id, {
+      // ✅ VALIDAR EDAD SEGÚN TIPO DE VISITA
+      if (formData.tipo_visita === 'individual') {
+        if (!formData.edad || formData.edad < 1 || formData.edad > 120) {
+          setError('Por favor, ingresa una edad válida (1-120 años)');
+          setLoading(false);
+          return;
+        }
+      } else if (formData.tipo_visita === 'grupo') {
+        if (!formData.edad_min || !formData.edad_max) {
+          setError('Por favor, completa el rango de edades del grupo');
+          setLoading(false);
+          return;
+        }
+        if (formData.edad_min < 1 || formData.edad_max > 120 || formData.edad_min > formData.edad_max) {
+          setError('Rango de edades inválido. Verifica los valores.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // ✅ PREPARAR DATOS PARA EL BACKEND
+      const datosBackend = {
         pais_origen: formData.pais_origen,
         ciudad_origen: formData.ciudad_origen,
         tipo_visitante: formData.tipo_visitante,
-        telefono: formData.telefono || null
-        // ❌ ELIMINADO: tipo_entrada y acompanantes
-      });
+        telefono: formData.telefono || null,
+        tipo_visita: formData.tipo_visita
+      };
+
+      // Agregar datos de edad según el tipo de visita
+      if (formData.tipo_visita === 'individual') {
+        datosBackend.edad = parseInt(formData.edad);
+      } else if (formData.tipo_visita === 'grupo') {
+        datosBackend.edad_min = parseInt(formData.edad_min);
+        datosBackend.edad_max = parseInt(formData.edad_max);
+      }
+
+      // ✅ ACTUALIZAR PERFIL EN BACKEND
+      const updatedData = await visitantesAPI.update(user.visitante_id, datosBackend);
 
       console.log('✅ Perfil actualizado:', updatedData);
 
@@ -75,6 +110,16 @@ const CompletarPerfilPage = () => {
     }
   };
 
+  const handleTipoVisitaChange = (tipo) => {
+    setFormData(prev => ({
+      ...prev,
+      tipo_visita: tipo,
+      edad: tipo === 'individual' ? prev.edad : '',
+      edad_min: tipo === 'grupo' ? prev.edad_min : '',
+      edad_max: tipo === 'grupo' ? prev.edad_max : ''
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
@@ -87,7 +132,7 @@ const CompletarPerfilPage = () => {
             ¡Hola, {user?.nombre}! 👋
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Seria de gran ayuda si nos ayudas a rellenar estes datos
+            Seria de gran ayuda si nos ayudas a rellenar estos datos
           </p>
         </div>
 
@@ -170,6 +215,98 @@ const CompletarPerfilPage = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Tipo de Visita (Individual o Grupo) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  👥 Tipo de Visita <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { value: 'individual', label: 'Visita Individual', icon: '👤', desc: 'Solo tú' },
+                    { value: 'grupo', label: 'Visita en Grupo', icon: '👥', desc: 'Múltiples personas' }
+                  ].map((tipo) => (
+                    <button
+                      key={tipo.value}
+                      type="button"
+                      onClick={() => handleTipoVisitaChange(tipo.value)}
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        formData.tipo_visita === tipo.value
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{tipo.icon}</span>
+                        <div>
+                          <div className="font-medium text-gray-900">{tipo.label}</div>
+                          <div className="text-xs text-gray-600">{tipo.desc}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Edad - Individual o Grupo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  {formData.tipo_visita === 'individual' 
+                    ? '🎂 Tu Edad <span class="text-red-500">*</span>' 
+                    : '🎂 Rango de Edades del Grupo <span class="text-red-500">*</span>'}
+                </label>
+                
+                {formData.tipo_visita === 'individual' ? (
+                  <div>
+                    <input
+                      type="number"
+                      value={formData.edad}
+                      onChange={(e) => setFormData({ ...formData, edad: e.target.value })}
+                      placeholder="Ingresa tu edad"
+                      min="1"
+                      max="120"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      required
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Edad entre 1 y 120 años
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Edad Mínima <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.edad_min}
+                        onChange={(e) => setFormData({ ...formData, edad_min: e.target.value })}
+                        placeholder="Edad mínima"
+                        min="1"
+                        max="120"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Edad Máxima <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.edad_max}
+                        onChange={(e) => setFormData({ ...formData, edad_max: e.target.value })}
+                        placeholder="Edad máxima"
+                        min="1"
+                        max="120"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Teléfono (opcional) */}

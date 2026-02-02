@@ -1,14 +1,17 @@
+// components/UI/ErrorModal.jsx (VERSIÓN MEJORADA)
 import { useEffect } from 'react';
 
 const ErrorModal = ({ error, onClose }) => {
   // Cerrar modal con tecla Escape
   useEffect(() => {
+    if (!error) return;
+    
     const handleEsc = (event) => {
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
+  }, [error, onClose]);
 
   if (!error) return null;
 
@@ -21,6 +24,7 @@ const ErrorModal = ({ error, onClose }) => {
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-opacity duration-300"
+      style={{ zIndex: 100 }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -37,16 +41,16 @@ const ErrorModal = ({ error, onClose }) => {
           {/* Header con icono */}
           <div className="flex flex-col items-center mb-5">
             <div className="bg-gradient-to-br from-rose-50 to-pink-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 border-2 border-rose-100">
-              <span className="text-4xl">🤖</span>
+              <span className="text-4xl">😔</span>
             </div>
             <h2 
               id="error-modal-title" 
               className="text-xl font-bold text-gray-900 text-center"
             >
-              ¡Vaya! Tenemos un problemita
+              Algo salió mal
             </h2>
-            <p className="text-gray-500 text-center mt-1">
-              No pudimos generar tu itinerario, pero te explicamos por qué:
+            <p className="text-gray-500 text-center mt-1 text-sm">
+              No pudimos procesar tu solicitud
             </p>
           </div>
 
@@ -56,11 +60,16 @@ const ErrorModal = ({ error, onClose }) => {
             dangerouslySetInnerHTML={{ __html: formattedMessage }}
           />
 
+          {/* Sugerencia */}
+          <div className="mt-4 text-center text-gray-600 text-xs">
+            💡 Si el problema persiste, contacta a soporte
+          </div>
+
           {/* Botón de acción */}
           <div className="mt-6 flex justify-center">
             <button
               onClick={onClose}
-              className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 w-full"
+              className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-pink-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 w-full"
             >
               ✨ Entendido
             </button>

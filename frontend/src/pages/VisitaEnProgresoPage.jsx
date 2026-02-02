@@ -139,26 +139,23 @@ const VisitaEnProgresoPage = () => {
     setMostrarEvaluacion(true);
   };
 
-  const handleEnviarEvaluacion = async (evaluacion) => {
-    try {
-      // Guardar evaluación
-      await itinerariosAPI.guardarEvaluacion(parseInt(id), evaluacion);
-      
-      // Completar itinerario
-      await itinerariosAPI.actualizar(id, { estado: 'completado' });
-      
-      setMostrarEvaluacion(false);
-      
-      // Mensaje de agradecimiento
-      alert('¡Gracias por tu evaluación! Tu opinión nos ayuda a mejorar.');
-      
-      // Redirigir al detalle del itinerario
-      navigate(`/itinerarios/${id}`);
-    } catch (err) {
-      console.error('❌ Error guardando evaluación:', err);
-      alert('Hubo un error al guardar tu evaluación. Por favor, intenta de nuevo.');
-    }
-  };
+const handleEnviarEvaluacion = async (evaluacion) => {
+  try {
+    // Guardar evaluación
+    await itinerariosAPI.guardarEvaluacion(parseInt(id), evaluacion);
+    
+    // Completar itinerario
+    await itinerariosAPI.actualizar(id, { estado: 'completado' });
+    
+    // ✅ Cerrar modal y redirigir
+    setMostrarEvaluacion(false);
+    navigate(`/itinerarios/${id}`);
+    
+  } catch (err) {
+    console.error('❌ Error guardando evaluación:', err);
+    // El error ya se maneja en EvaluacionModal.jsx
+  }
+};
 
   const formatearTiempo = (segundos) => {
     const h = Math.floor(segundos / 3600);
@@ -187,7 +184,7 @@ const VisitaEnProgresoPage = () => {
       }
     }
     
-    instrucciones.push(`Dirígete a la ${areaSiguiente.area.zona || 'zona indicada'}`);
+    
     instrucciones.push(`Busca "${areaSiguiente.area.nombre}"`);
     
     return instrucciones;

@@ -242,7 +242,7 @@ def ajustar_itinerario_por_tiempo(
         mensaje = (
             f"⏰ **El museo cerrará muy pronto** (en {minutos_disponibles} minutos)\n\n"
             f"😔 No hay tiempo suficiente para una visita significativa.\n\n"
-            f"📅 **Te recomendamos volver mañana**\n"
+            f"📅 **Te recomendamos volver en otro momento**\n"
             f"Podrás disfrutar el museo con calma y aprovechar todas las áreas.\n\n"
         )
         
