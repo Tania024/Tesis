@@ -28,6 +28,8 @@ const GenerarItinerarioPage = () => {
   const [seleccionManual, setSeleccionManual] = useState(false);
   const [areasSeleccionadas, setAreasSeleccionadas] = useState([]);
 
+  
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -96,16 +98,11 @@ const GenerarItinerarioPage = () => {
       arte: ['ART-01'],
       historia: ['ARQ-01', 'RUIN-01'],
       cultura: ['ARQ-01', 'ETN-01', 'ART-01'],
-
       naturaleza: ['BOT-01', 'AVE-01'],      
       biodiversidad: ['BOT-01', 'AVE-01'],   
-      plantas: ['BOT-01'],
-      aves: ['AVE-01'],
       botanica: ['BOT-01'],                  
       ornitologia: ['AVE-01'],               
-    
-    // Otros
-    temporal: ['TEMP-01']
+      temporal: ['TEMP-01']
     };
     
     const areas = new Set();
@@ -222,9 +219,22 @@ const GenerarItinerarioPage = () => {
       setLoading(true);
       setError(null);
 
-      // Validar que al menos una área esté seleccionada
+      // 🔥 VALIDACIÓN 1: Al menos una área seleccionada
       if (areasSeleccionadas.length === 0) {
         setError('Por favor, selecciona al menos una área para visitar');
+        setLoading(false);
+        return;
+      }
+
+      // 🔥 VALIDACIÓN 2: Tipo de entrada vs acompañantes
+      if (tipoEntrada === 'grupo' && acompanantes < 1) {
+        setError('⚠️ Los grupos deben tener al menos 1 acompañante');
+        setLoading(false);
+        return;
+      }
+
+      if (tipoEntrada === 'individual' && acompanantes > 0) {
+        setError('⚠️ La entrada individual no puede tener acompañantes');
         setLoading(false);
         return;
       }
@@ -241,6 +251,8 @@ const GenerarItinerarioPage = () => {
       }
 
       console.log('🤖 Generando itinerario...');
+      console.log('Tipo de entrada:', tipoEntrada);
+      console.log('Acompañantes:', acompanantes);
       console.log('Tiempo disponible:', tiempoFinal === null ? 'Sin límite' : `${tiempoFinal} minutos`);
       console.log('Nivel de detalle:', nivelDetalle);
       console.log('Áreas seleccionadas:', areasSeleccionadas);
@@ -254,14 +266,14 @@ const GenerarItinerarioPage = () => {
         detallado: 'profundo'
       };
   
-      // ✅ PAYLOAD CON ÁREAS SELECCIONADAS
+      // ✅ PAYLOAD CON TODOS LOS CAMPOS
       const payload = {
         visitante_id: user.visitante_id,
         intereses: interesesArray.length > 0 ? interesesArray : ['arqueologia'],
         tiempo_disponible: tiempoFinal,
         nivel_detalle: MAPA_NIVEL_DETALLE[nivelDetalle],
-        tipo_entrada: tipoEntrada,
-        acompanantes: acompanantes,
+        tipo_entrada: tipoEntrada,           // 🔥 CAMPO NUEVO
+        acompanantes: acompanantes,          // 🔥 CAMPO NUEVO
         incluir_descansos: tiempoFinal ? tiempoFinal > 90 : true,
         areas_evitar: []
       };
@@ -283,7 +295,7 @@ const GenerarItinerarioPage = () => {
 
     } catch (err) {
       console.error('❌ Error generando itinerario:', err);
-      console.error('Response ', err.response?.data);
+      console.error('Response:', err.response?.data);
       
       let errorMessage = 'Error al generar el itinerario. Intenta de nuevo.';
       
@@ -394,7 +406,7 @@ const GenerarItinerarioPage = () => {
             </div>
           </div>
 
-          {/* ✅ NUEVA SECCIÓN: Selección de Áreas */}
+          {/* ✅ SECCIÓN: Selección de Áreas */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span>🏛️</span>
@@ -489,7 +501,7 @@ const GenerarItinerarioPage = () => {
             )}
           </div>
 
-          {/* ✅ NUEVA SECCIÓN: Tipo de Entrada */}
+          {/* ✅ SECCIÓN: Tipo de Entrada */}
           <div className="mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span>🎫</span>
@@ -505,8 +517,8 @@ const GenerarItinerarioPage = () => {
               ].map((tipo) => (
                 <button
                   key={tipo.value}
-                  onClick={() => {setTipoEntrada(tipo.value);
-  
+                  onClick={() => {
+                    setTipoEntrada(tipo.value);
                     if (tipo.value === 'individual') {
                       setAcompanantes(0);
                     } else if (tipo.value === 'grupo' && acompanantes === 0) {
@@ -526,75 +538,74 @@ const GenerarItinerarioPage = () => {
             </div>
           </div>
 
-          {/* ✅ NUEVA SECCIÓN: Acompañantes */}
+          {/* ✅ SECCIÓN: Acompañantes */}
           <div className={`mb-8 rounded-xl p-5 transition-all ${
-  tipoEntrada === 'individual' 
-    ? 'bg-gray-100 border-2 border-gray-300'  // Gris si es individual
-    : 'bg-blue-50 border-2 border-blue-200'   // Azul si no es individual
-}`}>
+            tipoEntrada === 'individual' 
+              ? 'bg-gray-100 border-2 border-gray-300'
+              : 'bg-blue-50 border-2 border-blue-200'
+          }`}>
             <label className="block text-sm font-medium mb-3 flex items-center gap-2">
-    <span>👨‍👩‍👧‍👦</span>
-    <span>¿Viene con acompañantes?</span>
-    
-    {/* 🔥 BADGE CONDICIONAL */}
-    {tipoEntrada === 'individual' && (
-      <span className="ml-2 px-2 py-0.5 bg-gray-300 text-gray-700 text-xs font-semibold rounded-full">
-        No disponible
-      </span>
-    )}
-    {tipoEntrada === 'grupo' && (
-      <span className="ml-2 px-2 py-0.5 bg-blue-200 text-blue-700 text-xs font-semibold rounded-full">
-        Mínimo 1
-      </span>
-    )}
-  </label>
+              <span>👨‍👩‍👧‍👦</span>
+              <span>¿Viene con acompañantes?</span>
+              
+              {tipoEntrada === 'individual' && (
+                <span className="ml-2 px-2 py-0.5 bg-gray-300 text-gray-700 text-xs font-semibold rounded-full">
+                  No disponible
+                </span>
+              )}
+              {tipoEntrada === 'grupo' && (
+                <span className="ml-2 px-2 py-0.5 bg-blue-200 text-blue-700 text-xs font-semibold rounded-full">
+                  Mínimo 1
+                </span>
+              )}
+            </label>
             <div className="flex items-center justify-center gap-6">
               <button
-  type="button"
-  onClick={() => {
-    const nuevoValor = Math.max(
-      tipoEntrada === 'grupo' ? 1 : 0,  // Mínimo 1 si es grupo, 0 si no
-      acompanantes - 1
-    );
-    setAcompanantes(nuevoValor);
-  }}
-  disabled={tipoEntrada === 'individual' || (tipoEntrada === 'grupo' && acompanantes <= 1)}
-  className={`w-12 h-12 rounded-full border-2 transition-colors flex items-center justify-center text-xl font-bold ${
-    tipoEntrada === 'individual' || (tipoEntrada === 'grupo' && acompanantes <= 1)
-      ? 'border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed'
-      : 'border-gray-300 hover:border-primary-500 hover:bg-primary-50'
-  }`}
->
-  -
-</button>
+                type="button"
+                onClick={() => {
+                  const nuevoValor = Math.max(
+                    tipoEntrada === 'grupo' ? 1 : 0,
+                    acompanantes - 1
+                  );
+                  setAcompanantes(nuevoValor);
+                }}
+                disabled={tipoEntrada === 'individual' || (tipoEntrada === 'grupo' && acompanantes <= 1)}
+                className={`w-12 h-12 rounded-full border-2 transition-colors flex items-center justify-center text-xl font-bold ${
+                  tipoEntrada === 'individual' || (tipoEntrada === 'grupo' && acompanantes <= 1)
+                    ? 'border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 hover:border-primary-500 hover:bg-primary-50'
+                }`}
+              >
+                -
+              </button>
               <div className={`text-4xl font-bold w-20 text-center ${
-  tipoEntrada === 'individual' ? 'text-gray-400' : 'text-gray-900'
-}`}>
-  {acompanantes}
-</div>
+                tipoEntrada === 'individual' ? 'text-gray-400' : 'text-gray-900'
+              }`}>
+                {acompanantes}
+              </div>
               <button
-  type="button"
-  onClick={() => setAcompanantes(acompanantes + 1)}
-  disabled={tipoEntrada === 'individual'}
-  className={`w-12 h-12 rounded-full border-2 transition-colors flex items-center justify-center text-xl font-bold ${
-    tipoEntrada === 'individual'
-      ? 'border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed'
-      : 'border-gray-300 hover:border-primary-500 hover:bg-primary-50'
-  }`}
->
-  +
-</button>
+                type="button"
+                onClick={() => setAcompanantes(acompanantes + 1)}
+                disabled={tipoEntrada === 'individual'}
+                className={`w-12 h-12 rounded-full border-2 transition-colors flex items-center justify-center text-xl font-bold ${
+                  tipoEntrada === 'individual'
+                    ? 'border-gray-300 bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-300 hover:border-primary-500 hover:bg-primary-50'
+                }`}
+              >
+                +
+              </button>
             </div>
             <p className={`text-sm mt-3 text-center ${
-  tipoEntrada === 'individual' ? 'text-gray-500' : 'text-gray-600'
-}`}>
-  {tipoEntrada === 'individual' 
-    ? 'Entrada individual no incluye acompañantes'
-    : tipoEntrada === 'grupo'
-      ? 'Los grupos requieren al menos 1 acompañante'
-      : 'Incluye familiares, amigos o compañeros de viaje'
-  }
-</p>
+              tipoEntrada === 'individual' ? 'text-gray-500' : 'text-gray-600'
+            }`}>
+              {tipoEntrada === 'individual' 
+                ? 'Entrada individual no incluye acompañantes'
+                : tipoEntrada === 'grupo'
+                  ? 'Los grupos requieren al menos 1 acompañante'
+                  : 'Incluye familiares, amigos o compañeros de viaje'
+              }
+            </p>
           </div>
 
           {/* Pregunta 1: Tiempo disponible */}

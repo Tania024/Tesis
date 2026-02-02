@@ -205,6 +205,9 @@ class ItinerarioDetalleBase(BaseModel):
     datos_curiosos: Optional[List[str]] = Field(None, description="Array de 4 datos curiosos")
     que_observar: Optional[List[str]] = Field(None, description="Array de 4 elementos a observar")
     puntos_clave: Optional[List[str]] = Field(None, description="Array de puntos clave (legacy)")
+    # Agregar a ItinerarioBase:
+    tipo_entrada: Optional[TipoEntradaEnum] = None
+    acompañantes: int = Field(default=0, ge=0)
 
     # 🔥 VALIDATORS: Convertir strings JSON a listas
     @field_validator('datos_curiosos', 'que_observar', 'puntos_clave', mode='before')
@@ -230,6 +233,8 @@ class ItinerarioDetalleUpdate(BaseModel):
     tiempo_real: Optional[int] = Field(None, ge=0)
     hora_inicio: Optional[datetime] = None
     hora_fin: Optional[datetime] = None
+    tipo_entrada: Optional[TipoEntradaEnum] = None
+    acompañantes: Optional[int] = Field(None, ge=0)
 
 class ItinerarioDetalleResponse(ItinerarioDetalleBase):
     id: int

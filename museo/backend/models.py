@@ -173,6 +173,9 @@ class Itinerario(Base):
     modelo_ia_usado = Column(String(50))  # deepseek, ollama
     prompt_usado = Column(Text)
     respuesta_ia = Column(JSONB)  # Respuesta completa JSON
+    # Agregar a Itinerario:
+    tipo_entrada = Column(String(50))
+    acompañantes = Column(Integer, default=0)
     
     # Relaciones
     perfil = relationship("Perfil", back_populates="itinerarios")

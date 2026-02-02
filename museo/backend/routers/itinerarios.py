@@ -167,7 +167,9 @@ async def generar_itinerario_ia(
                 "temperature": resultado_ia["metadata"]["temperature"],
                 "tiempo_generacion": resultado_ia["metadata"]["tiempo_generacion"],
                 "timestamp": resultado_ia["metadata"]["timestamp"]
-            }
+            },
+            tipo_entrada=solicitud.tipo_entrada,
+            acompañantes=solicitud.acompañantes,
         )
         
         db.add(nuevo_itinerario)

@@ -88,10 +88,6 @@ def validar_horario_museo(
             f"📅 **Vuelve mañana ({obtener_nombre_dia(fecha_apertura.weekday())})**\n"
             f"⏰ Horario: {horario_manana['apertura'].strftime('%H:%M')} - "
             f"{horario_manana['cierre'].strftime('%H:%M')}\n\n"
-            f"📋 **Horarios completos:**\n"
-            f"• Martes a Viernes: 8:00 - 17:00\n"
-            f"• Sábados y Domingos: 10:00 - 16:00\n"
-            f"• Lunes: Cerrado"
         )
         
         return False, mensaje, {
