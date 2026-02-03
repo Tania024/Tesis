@@ -186,7 +186,7 @@ const MisItinerariosPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span>📍</span>
-                      <span>{itinerario.numero_areas || 0} áreas</span>
+                      <span>{itinerario.detalles?.length || 0} {itinerario.detalles?.length === 1 ? 'área' : 'áreas'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span>📅</span>

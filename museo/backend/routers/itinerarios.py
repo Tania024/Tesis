@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from database import get_db
 from models import Itinerario, Perfil, Visitante, Area, ItinerarioDetalle
@@ -434,9 +434,32 @@ async def obtener_itinerarios_visitante(
         return {"itinerarios": []}
     
     itinerarios = db.query(Itinerario).filter(Itinerario.perfil_id == perfil.id).all()
-    return {"total": len(itinerarios), "itinerarios": itinerarios}
-
-
+    
+    # 🔥 AGREGAR: Conteo de áreas para cada itinerario
+    resultado = []
+    for itinerario in itinerarios:
+        itinerario_dict = {
+            "id": itinerario.id,
+            "perfil_id": itinerario.perfil_id,
+            "titulo": itinerario.titulo,
+            "descripcion": itinerario.descripcion,
+            "duracion_total": itinerario.duracion_total,
+            "estado": itinerario.estado,
+            "fecha_generacion": itinerario.fecha_generacion,
+            "fecha_inicio": itinerario.fecha_inicio,
+            "fecha_fin": itinerario.fecha_fin,
+            "puntuacion": itinerario.puntuacion,
+            "modelo_ia_usado": itinerario.modelo_ia_usado,
+            "tipo_entrada": itinerario.tipo_entrada,
+            "acompañantes": itinerario.acompañantes,
+            # 🔥 NUEVO: Conteo de áreas
+            "numero_areas": len(itinerario.detalles) if itinerario.detalles else 0,
+            # Incluir detalles si existen
+            "detalles": itinerario.detalles
+        }
+        resultado.append(itinerario_dict)
+    
+    return {"total": len(resultado), "itinerarios": resultado}
 # ============================================
 # READ - ENDPOINT GENÉRICO AL FINAL
 # ============================================
@@ -457,21 +480,62 @@ async def obtener_itinerario(itinerario_id: int, db: Session = Depends(get_db)):
 @router.put("/{itinerario_id}", response_model=ItinerarioResponse)
 async def actualizar_itinerario(
     itinerario_id: int,
-    itinerario_data: ItinerarioUpdate,
+    itinerario_update: ItinerarioUpdate,
     db: Session = Depends(get_db)
 ):
-    """Actualizar estado y feedback del itinerario"""
+    """
+    Actualizar un itinerario existente.
+    Útil para marcar como completado, agregar puntuación, etc.
+    """
+    
+    # Buscar itinerario
     itinerario = db.query(Itinerario).filter(Itinerario.id == itinerario_id).first()
+    
     if not itinerario:
-        raise HTTPException(status_code=404, detail="Itinerario no encontrado")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Itinerario {itinerario_id} no encontrado"
+        )
     
-    for campo, valor in itinerario_data.model_dump(exclude_unset=True).items():
-        setattr(itinerario, campo, valor)
+    # Actualizar solo los campos que vienen en el request
+    if itinerario_update.estado is not None:
+        itinerario.estado = itinerario_update.estado
+        
+        # Si se marca como completado, actualizar fecha_fin
+        if itinerario_update.estado == "completado" and not itinerario.fecha_fin:
+            itinerario.fecha_fin = datetime.now(timezone.utc)
     
-    db.commit()
-    db.refresh(itinerario)
-    logger.info(f"✅ Itinerario actualizado: {itinerario_id}")
-    return itinerario
+    if itinerario_update.fecha_inicio is not None:
+        itinerario.fecha_inicio = itinerario_update.fecha_inicio
+    
+    if itinerario_update.fecha_fin is not None:
+        itinerario.fecha_fin = itinerario_update.fecha_fin
+    
+    if itinerario_update.puntuacion is not None:
+        itinerario.puntuacion = itinerario_update.puntuacion
+    
+    if itinerario_update.tipo_entrada is not None:
+        itinerario.tipo_entrada = itinerario_update.tipo_entrada
+    
+    if itinerario_update.acompañantes is not None:
+        itinerario.acompañantes = itinerario_update.acompañantes
+    
+    # Guardar cambios
+    try:
+        db.commit()
+        db.refresh(itinerario)
+        
+        logger.info(f"Itinerario {itinerario_id} actualizado: estado={itinerario.estado}")
+        
+        return itinerario
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error actualizando itinerario {itinerario_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error actualizando itinerario: {str(e)}"
+        )
 
 
 # ============================================

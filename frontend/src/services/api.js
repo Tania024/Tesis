@@ -205,6 +205,11 @@ export const itinerariosAPI = {
     const response = await api.put(`/itinerarios/${id}`, datos);
     return response.data;
   },
+
+  actualizarItinerario: async (id, datos) => {
+    const response = await api.put(`/itinerarios/${id}`, datos);
+    return response.data;
+  },
   generarProgresivo: async (visitanteId, datos) => {
     try {
       const response = await api.post('/ia/generar-itinerario-progresivo', {

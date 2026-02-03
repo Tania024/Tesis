@@ -72,7 +72,8 @@ const SuccessModal = ({ isOpen, onClose }) => {
           {/* Botón de acción */}
           <div className="mt-6 flex justify-center">
             <button
-              onClick={onClose}
+              onClick={() => {onClose(); navigate('/');
+          }}
               className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 w-full transform hover:scale-105"
             >
               🚀 Continuar

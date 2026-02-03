@@ -1,12 +1,12 @@
 # schemas.py
-
+# ✅ CORREGIDO: Sin campos eliminados de la BD
 
 from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from enum import Enum
 import json
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 # ============================================
 # ENUMS
@@ -36,7 +36,7 @@ class EstadoItinerarioEnum(str, Enum):
     CANCELADO = "cancelado"
 
 # ============================================
-# SCHEMAS: VISITANTE
+# SCHEMAS: VISITANTE (CORREGIDO)
 # ============================================
 
 class VisitanteBase(BaseModel):
@@ -47,8 +47,8 @@ class VisitanteBase(BaseModel):
     pais_origen: Optional[str] = Field(None, max_length=100)
     ciudad_origen: Optional[str] = Field(None, max_length=100)
     tipo_visitante: Optional[TipoVisitanteEnum] = None
-    tipo_entrada: Optional[TipoEntradaEnum] = None
-    acompanantes: int = Field(default=0, ge=0)
+    # ✅ tipo_entrada ELIMINADO (movido a itinerarios)
+    # ✅ acompanantes ELIMINADO (movido a itinerarios)
     fecha_nacimiento: Optional[date] = None
 
 class VisitanteCreate(VisitanteBase):
@@ -62,8 +62,8 @@ class VisitanteUpdate(BaseModel):
     pais_origen: Optional[str] = Field(None, max_length=100)
     ciudad_origen: Optional[str] = Field(None, max_length=100)
     tipo_visitante: Optional[TipoVisitanteEnum] = None
-    tipo_entrada: Optional[TipoEntradaEnum] = None
-    acompanantes: Optional[int] = Field(None, ge=0)
+    # ✅ tipo_entrada ELIMINADO
+    # ✅ acompanantes ELIMINADO
     fecha_nacimiento: Optional[date] = None
 
 class VisitanteResponse(VisitanteBase):
@@ -111,7 +111,7 @@ class PerfilResponse(PerfilBase):
         from_attributes = True
 
 # ============================================
-# SCHEMAS: AREA
+# SCHEMAS: AREA (CORREGIDO)
 # ============================================
 
 class AreaBase(BaseModel):
@@ -127,7 +127,7 @@ class AreaBase(BaseModel):
     activa: bool = True
     requiere_guia: bool = False
     piso: int = Field(default=1, ge=1, le=5)
-    zona: Optional[str] = Field(None, max_length=50)
+    # ✅ zona ELIMINADO
 
 class AreaCreate(AreaBase):
     pass
@@ -144,7 +144,7 @@ class AreaUpdate(BaseModel):
     activa: Optional[bool] = None
     requiere_guia: Optional[bool] = None
     piso: Optional[int] = Field(None, ge=1, le=5)
-    zona: Optional[str] = Field(None, max_length=50)
+    # ✅ zona ELIMINADO
 
 class AreaResponse(AreaBase):
     id: int
@@ -153,12 +153,15 @@ class AreaResponse(AreaBase):
         from_attributes = True
 
 # ============================================
-# SCHEMAS: ITINERARIO
+# SCHEMAS: ITINERARIO (CORREGIDO)
 # ============================================
 
 class ItinerarioBase(BaseModel):
     titulo: Optional[str] = Field(None, max_length=200)
     nivel_detalle: NivelDetalleEnum = NivelDetalleEnum.NORMAL
+    # 🔥 NUEVOS CAMPOS: tipo_entrada y acompañantes
+    tipo_entrada: Optional[TipoEntradaEnum] = None
+    acompañantes: int = Field(default=0, ge=0)
 
 class ItinerarioCreate(ItinerarioBase):
     perfil_id: int
@@ -169,14 +172,16 @@ class ItinerarioUpdate(BaseModel):
     fecha_inicio: Optional[datetime] = None
     fecha_fin: Optional[datetime] = None
     puntuacion: Optional[int] = Field(None, ge=1, le=5)
-    comentarios: Optional[str] = None
+    # ✅ comentarios ELIMINADO
+    tipo_entrada: Optional[TipoEntradaEnum] = None
+    acompañantes: Optional[int] = Field(None, ge=0)
 
 class ItinerarioResponse(ItinerarioBase):
     id: int
     perfil_id: int
     descripcion: Optional[str] = None
     duracion_total: Optional[int] = None
-    distancia_estimada: Optional[float] = None
+    # ✅ distancia_estimada ELIMINADO
     estado: str
     fecha_generacion: datetime
     fecha_inicio: Optional[datetime] = None
@@ -188,9 +193,8 @@ class ItinerarioResponse(ItinerarioBase):
         from_attributes = True
 
 # ============================================
-# SCHEMAS: ITINERARIO DETALLE (ACTUALIZADO)
+# SCHEMAS: ITINERARIO DETALLE
 # ============================================
-# REEMPLAZAR las líneas 193-220 de tu schemas.py actual con esto:
 
 class ItinerarioDetalleBase(BaseModel):
     orden: int = Field(..., ge=1)
@@ -200,16 +204,13 @@ class ItinerarioDetalleBase(BaseModel):
     introduccion: Optional[str] = None
     recomendacion: Optional[str] = None
     
-    # 🔥 NUEVOS CAMPOS PARA CONTENIDO EXTENSO
+    # Contenido extenso generado por IA
     historia_contextual: Optional[str] = Field(None, description="Párrafo largo sobre historia y contexto")
     datos_curiosos: Optional[List[str]] = Field(None, description="Array de 4 datos curiosos")
     que_observar: Optional[List[str]] = Field(None, description="Array de 4 elementos a observar")
-    puntos_clave: Optional[List[str]] = Field(None, description="Array de puntos clave (legacy)")
-    # Agregar a ItinerarioBase:
-    tipo_entrada: Optional[TipoEntradaEnum] = None
-    acompañantes: int = Field(default=0, ge=0)
+    puntos_clave: Optional[List[str]] = Field(None, description="Array de puntos clave")
 
-    # 🔥 VALIDATORS: Convertir strings JSON a listas
+    # Validators: Convertir strings JSON a listas
     @field_validator('datos_curiosos', 'que_observar', 'puntos_clave', mode='before')
     @classmethod
     def parse_json_strings(cls, v):
@@ -233,8 +234,6 @@ class ItinerarioDetalleUpdate(BaseModel):
     tiempo_real: Optional[int] = Field(None, ge=0)
     hora_inicio: Optional[datetime] = None
     hora_fin: Optional[datetime] = None
-    tipo_entrada: Optional[TipoEntradaEnum] = None
-    acompañantes: Optional[int] = Field(None, ge=0)
 
 class ItinerarioDetalleResponse(ItinerarioDetalleBase):
     id: int
@@ -250,7 +249,7 @@ class ItinerarioDetalleResponse(ItinerarioDetalleBase):
         from_attributes = True
 
 # ============================================
-# SCHEMAS: HISTORIAL VISITA
+# SCHEMAS: HISTORIAL VISITA (CORREGIDO)
 # ============================================
 
 class HistorialVisitaBase(BaseModel):
@@ -284,14 +283,9 @@ class HistorialVisitaResponse(HistorialVisitaBase):
         from_attributes = True
 
 
-
-
-# schemas/evaluacion.py
-# 🔥 NUEVO: Schemas para evaluaciones
-
-from pydantic import BaseModel, Field
-from typing import Optional
-from datetime import datetime
+# ============================================
+# SCHEMAS: EVALUACION
+# ============================================
 
 class EvaluacionCreate(BaseModel):
     """Schema para crear evaluación"""
@@ -341,7 +335,6 @@ class EstadisticasEvaluacion(BaseModel):
 class VisitanteConPerfil(VisitanteResponse):
     perfil: Optional[PerfilResponse] = None
 
-# ✅ Definir primero para poder usarlo en ItinerarioCompleto
 class ItinerarioDetalleConArea(ItinerarioDetalleResponse):
     area: Optional[AreaResponse] = None
 
@@ -350,17 +343,28 @@ class ItinerarioCompleto(ItinerarioResponse):
 
 
 # ============================================
-# SCHEMAS PARA IA - ✅ CORREGIDO
+# SCHEMAS PARA IA
 # ============================================
 
 class SolicitudItinerario(BaseModel):
     visitante_id: int
-    # ✅ CAMBIADO: Ahora es Optional[int] para permitir null (sin límite de tiempo)
     tiempo_disponible: Optional[int] = Field(None, ge=30, le=480, description="Tiempo en minutos (null = sin límite)")
     intereses: List[str] = Field(..., description="Lista de intereses")
     nivel_detalle: NivelDetalleEnum = NivelDetalleEnum.NORMAL
     incluir_descansos: bool = True
     areas_evitar: Optional[List[int]] = Field(None, description="IDs de áreas a evitar")
+    # 🔥 NUEVOS CAMPOS REQUERIDOS
+    tipo_entrada: TipoEntradaEnum
+    acompañantes: int = Field(default=0, ge=0, le=50)
+    
+    # Validator para validar tipo_entrada vs acompañantes
+    @model_validator(mode='after')
+    def validar_tipo_entrada_acompanantes(self):
+        if self.tipo_entrada == TipoEntradaEnum.INDIVIDUAL and self.acompañantes > 0:
+            raise ValueError('Entrada individual no puede tener acompañantes')
+        if self.tipo_entrada == TipoEntradaEnum.GRUPO and self.acompañantes < 1:
+            raise ValueError('Entrada de grupo debe tener al menos 1 acompañante')
+        return self
 
 class RespuestaIA(BaseModel):
     titulo: str

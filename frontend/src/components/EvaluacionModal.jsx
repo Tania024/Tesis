@@ -81,13 +81,20 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
       // 1. Enviar evaluación
       await onSubmit(evaluacion);
       
-      // 2. Generar y enviar certificado
+      // 2. 🔥 MARCAR ITINERARIO COMO COMPLETADO
+      console.log('✅ Marcando itinerario como completado:', itinerarioId);
+      await itinerariosAPI.actualizarItinerario(itinerarioId, { 
+        estado: 'completado',
+        fecha_fin: new Date().toISOString()
+      });
+      
+      // 3. Generar y enviar certificado
       console.log('📨 Generando certificado para itinerario:', itinerarioId);
       const response = await itinerariosAPI.generarCertificado(itinerarioId);
       
       console.log('✅ Certificado generado:', response);
       
-      // 3. ✅ MOSTRAR MODAL DE ÉXITO (en lugar de alert feo)
+      // 4. ✅ MOSTRAR MODAL DE ÉXITO
       setSuccessModal(true);
       
     } catch (error) {

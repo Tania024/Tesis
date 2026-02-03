@@ -1,4 +1,5 @@
 # models.py
+# ✅ CORREGIDO: Columnas eliminadas de BD también eliminadas del código
 
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, DateTime, Date, 
@@ -12,7 +13,7 @@ from datetime import datetime, timezone
 from database import Base
 
 # ============================================
-# MODELO: VISITANTES
+# MODELO: VISITANTES (CORREGIDO)
 # ============================================
 
 class Visitante(Base):
@@ -30,9 +31,7 @@ class Visitante(Base):
     ciudad_origen = Column(String(100))
     tipo_visitante = Column(String(50))  # local, nacional, internacional
     
-    # Tipo de entrada
-    tipo_entrada = Column(String(50))  # estudiante, adulto_mayor, grupo, individual
-    acompanantes = Column(Integer, default=0)
+    # ✅ tipo_entrada y acompanantes ELIMINADOS (movidos a itinerarios)
     
     # Información adicional
     fecha_nacimiento = Column(Date)
@@ -47,22 +46,16 @@ class Visitante(Base):
     perfil = relationship("Perfil", back_populates="visitante", uselist=False, cascade="all, delete-orphan")
     historial = relationship("HistorialVisita", back_populates="visitante", cascade="all, delete-orphan")
     
-    # Constraints
+    # Constraints (✅ ELIMINADO check_tipo_entrada)
     __table_args__ = (
         CheckConstraint(
             "tipo_visitante IN ('local', 'nacional', 'internacional')",
             name='check_tipo_visitante'
         ),
-        CheckConstraint(
-            "tipo_entrada IN ('estudiante', 'adulto_mayor', 'grupo', 'individual')",
-            name='check_tipo_entrada'
-        ),
     )
     
     def __repr__(self):
         return f"<Visitante {self.codigo_visita}: {self.nombre} {self.apellido}>"
-    
-
 
 
 # ============================================
@@ -104,7 +97,7 @@ class Perfil(Base):
 
 
 # ============================================
-# MODELO: AREAS
+# MODELO: AREAS (CORREGIDO)
 # ============================================
 
 class Area(Base):
@@ -131,7 +124,7 @@ class Area(Base):
     
     # Ubicación
     piso = Column(Integer, default=1)
-    zona = Column(String(50))  # norte, sur, exterior
+    # ✅ zona ELIMINADO
     
     # Relaciones
     detalles_itinerario = relationship("ItinerarioDetalle", back_populates="area")
@@ -154,7 +147,11 @@ class Itinerario(Base):
     titulo = Column(String(200))
     descripcion = Column(Text)  # Generado por IA
     duracion_total = Column(Integer)  # Minutos
-    distancia_estimada = Column(DECIMAL(5, 2))  # Metros
+    # ✅ distancia_estimada ELIMINADO
+    
+    # 🔥 NUEVOS CAMPOS: Tipo de entrada y acompañantes
+    tipo_entrada = Column(String(50))  # estudiante, adulto_mayor, grupo, individual
+    acompañantes = Column(Integer, default=0)
     
     # Estado
     estado = Column(String(20), default='generado', index=True)
@@ -167,15 +164,12 @@ class Itinerario(Base):
     
     # Feedback
     puntuacion = Column(Integer)  # 1-5
-    comentarios = Column(Text)
+    # ✅ comentarios ELIMINADO
     
     # Metadata IA
     modelo_ia_usado = Column(String(50))  # deepseek, ollama
     prompt_usado = Column(Text)
     respuesta_ia = Column(JSONB)  # Respuesta completa JSON
-    # Agregar a Itinerario:
-    tipo_entrada = Column(String(50))
-    acompañantes = Column(Integer, default=0)
     
     # Relaciones
     perfil = relationship("Perfil", back_populates="itinerarios")
@@ -193,15 +187,23 @@ class Itinerario(Base):
             "puntuacion >= 1 AND puntuacion <= 5",
             name='check_puntuacion'
         ),
+        CheckConstraint(
+            "tipo_entrada IN ('estudiante', 'adulto_mayor', 'grupo', 'individual')",
+            name='check_tipo_entrada_itinerario'
+        ),
+        CheckConstraint(
+            "acompañantes >= 0",
+            name='check_acompanantes'
+        ),
     )
     
     def __repr__(self):
         return f"<Itinerario {self.id}: {self.titulo}>"
 
+
 # ============================================
-# MODELO: ITINERARIO_DETALLES (ACTUALIZADO)
+# MODELO: ITINERARIO_DETALLES
 # ============================================
-# REEMPLAZAR las líneas 224-253 de tu models.py actual con esto:
 
 class ItinerarioDetalle(Base):
     __tablename__ = "itinerario_detalles"
@@ -219,11 +221,11 @@ class ItinerarioDetalle(Base):
     introduccion = Column(Text)
     recomendacion = Column(Text)
     
-    # 🔥 NUEVOS CAMPOS PARA CONTENIDO EXTENSO
-    historia_contextual = Column(Text)  # Párrafo largo de 5-7 líneas sobre historia y contexto
+    # Contenido extenso generado por IA
+    historia_contextual = Column(Text)  # Párrafo largo de 5-7 líneas
     datos_curiosos = Column(JSONB)      # Array de 4 datos curiosos
     que_observar = Column(JSONB)        # Array de 4 elementos a observar
-    puntos_clave = Column(ARRAY(Text))        # Array de puntos clave (legacy, puede ser ARRAY(Text) también)
+    puntos_clave = Column(ARRAY(Text))  # Array de puntos clave
     
     # Estado
     visitado = Column(Boolean, default=False)
@@ -242,7 +244,7 @@ class ItinerarioDetalle(Base):
 
 
 # ============================================
-# MODELO: HISTORIAL_VISITAS
+# MODELO: HISTORIAL_VISITAS (CORREGIDO)
 # ============================================
 
 class HistorialVisita(Base):
@@ -270,20 +272,14 @@ class HistorialVisita(Base):
     visitante = relationship("Visitante", back_populates="historial")
     itinerario = relationship("Itinerario", back_populates="historial")
     
-    # Constraints
-    __table_args__ = (
-        CheckConstraint(
-            "satisfaccion_general >= 1 AND satisfaccion_general <= 5",
-            name='check_satisfaccion'
-        ),
-    )
+    # ✅ Constraints ELIMINADO check_satisfaccion
     
     def __repr__(self):
         return f"<Visita {self.fecha_visita} - Visitante {self.visitante_id}>"
-    
+
 
 # ============================================
-# MODELO: EXPERIENCIA
+# MODELO: EVALUACION
 # ============================================
 
 class Evaluacion(Base):
