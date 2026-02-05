@@ -1,7 +1,9 @@
+// App.jsx - CORREGIDO
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import Footer from './components/Layout/Footer';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Importar páginas
 import Home from './pages/Home';
@@ -110,8 +112,8 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CompletarPerfilPage />
-                  </ProtectedRoute>
-                } 
+                </ProtectedRoute>
+              } 
             />
             
             {/* ============================================ */}
@@ -134,6 +136,11 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>
+        
+        {/* ✅ Botón de instalación PWA - DENTRO del Router */}
+        <PWAInstallPrompt />
+
+        
       </Router>
     </AuthProvider>
   );

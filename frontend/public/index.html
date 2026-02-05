@@ -1,0 +1,43 @@
+<!-- frontend/public/index.html -->
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    
+    <!-- ✅ CORREGIDO: Sin /public/ en la ruta -->
+    <link rel="icon" type="image/png" href="/images/logo-museo.png" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    
+    <!-- Meta tags para PWA -->
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MuseoPuma" />
+    
+    <!-- Icons PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/images/logo-museo.png" />
+    
+    <title>Museo Pumapungo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(registration => {
+          console.log('Service Worker registrado', registration);
+        })
+        .catch(error => {
+          console.error('Error registrando Service Worker:', error);
+        });
+    });
+  }
+</script>
+  </body>
+</html>
