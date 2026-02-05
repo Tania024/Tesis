@@ -1,5 +1,5 @@
 # utils/horarios_museo.py
-# Validación de horarios del Museo Pumapungo
+# ✅ VERSIÓN CON FORMATO DE LISTA PARA ErrorModal
 
 from datetime import datetime, time, timedelta
 from typing import Dict, Optional, Tuple
@@ -53,6 +53,22 @@ def obtener_nombre_dia(dia_semana: int) -> str:
     return DIAS_SEMANA.get(dia_semana, "Desconocido")
 
 
+def formatear_tiempo_espera(minutos: int) -> str:
+    """
+    Convierte minutos a formato legible (ej: "3 horas y 42 minutos")
+    """
+    if minutos >= 60:
+        horas = int(minutos // 60)
+        mins = int(minutos % 60)
+        
+        if mins > 0:
+            return f"{horas} hora{'s' if horas > 1 else ''} y {mins} minuto{'s' if mins != 1 else ''}"
+        else:
+            return f"{horas} hora{'s' if horas > 1 else ''}"
+    else:
+        return f"{int(minutos)} minuto{'s' if minutos != 1 else ''}"
+
+
 def validar_horario_museo(
     fecha_hora_actual: Optional[datetime] = None
 ) -> Tuple[bool, str, Dict]:
@@ -68,7 +84,7 @@ def validar_horario_museo(
     if fecha_hora_actual is None:
         fecha_hora_actual = datetime.now()
     
-    dia_semana = fecha_hora_actual.weekday()  # 0=Lunes, 6=Domingo
+    dia_semana = fecha_hora_actual.weekday()
     hora_actual = fecha_hora_actual.time()
     
     nombre_dia = obtener_nombre_dia(dia_semana)
@@ -78,16 +94,16 @@ def validar_horario_museo(
     # CASO 1: LUNES (CERRADO)
     # ============================================
     if horario_hoy is None:
-        # Calcular próximo día de apertura (Martes)
-        dias_hasta_apertura = 1  # Mañana es martes
+        dias_hasta_apertura = 1
         fecha_apertura = fecha_hora_actual + timedelta(days=dias_hasta_apertura)
         horario_manana = obtener_horario_dia(fecha_apertura.weekday())
         
         mensaje = (
-            f"🚫 El Museo Pumapungo está cerrado los {nombre_dia}.\n\n"
-            f"📅 **Vuelve mañana ({obtener_nombre_dia(fecha_apertura.weekday())})**\n"
-            f"⏰ Horario: {horario_manana['apertura'].strftime('%H:%M')} - "
-            f"{horario_manana['cierre'].strftime('%H:%M')}\n\n"
+            f"🚫 El museo está cerrado los {nombre_dia}\n\n"
+            f"📅 Te recomendamos volver mañana ({obtener_nombre_dia(fecha_apertura.weekday())})\n\n"
+            f"Podrás disfrutar el museo con calma y aprovechar todas las áreas.\n\n"
+            f"🕐 Horario de mañana ({obtener_nombre_dia(fecha_apertura.weekday())}): "
+            f"{horario_manana['apertura'].strftime('%H:%M')} - {horario_manana['cierre'].strftime('%H:%M')}"
         )
         
         return False, mensaje, {
@@ -109,12 +125,14 @@ def validar_horario_museo(
             datetime.combine(fecha_hora_actual.date(), hora_actual)
         ).total_seconds() / 60
         
+        tiempo_texto = formatear_tiempo_espera(minutos_para_abrir)
+        
         mensaje = (
-            f"⏰ El museo aún no está abierto.\n\n"
-            f"📅 Hoy {nombre_dia} abrimos a las **{horario_hoy['apertura'].strftime('%H:%M')}**\n"
-            f"🕐 Faltan aproximadamente **{int(minutos_para_abrir)} minutos** para abrir\n\n"
-            f"💡 **Vuelve a las {horario_hoy['apertura'].strftime('%H:%M')}** para disfrutar tu visita\n\n"
-            f"⏰ Horario de hoy: {horario_hoy['apertura'].strftime('%H:%M')} - "
+            f"⏰ El museo aún no está abierto\n\n"
+            f"📅 Hoy {nombre_dia} abrimos a las {horario_hoy['apertura'].strftime('%H:%M')}\n\n"
+            f"🕐 Faltan aproximadamente {tiempo_texto}\n\n"
+            f"💡 Vuelve más tarde para disfrutar tu visita\n\n"
+            f"📋 Horario de hoy: {horario_hoy['apertura'].strftime('%H:%M')} - "
             f"{horario_hoy['cierre'].strftime('%H:%M')}"
         )
         
@@ -130,11 +148,9 @@ def validar_horario_museo(
     # CASO 3: DESPUÉS DEL CIERRE
     # ============================================
     if hora_actual >= horario_hoy['cierre']:
-        # Calcular próximo día de apertura
         dias_hasta_apertura = 1
         fecha_apertura = fecha_hora_actual + timedelta(days=dias_hasta_apertura)
         
-        # Si mañana es lunes, saltamos al martes
         while obtener_horario_dia(fecha_apertura.weekday()) is None:
             dias_hasta_apertura += 1
             fecha_apertura = fecha_hora_actual + timedelta(days=dias_hasta_apertura)
@@ -143,11 +159,11 @@ def validar_horario_museo(
         nombre_dia_manana = obtener_nombre_dia(fecha_apertura.weekday())
         
         mensaje = (
-            f"🌙 El museo ya cerró por hoy.\n\n"
-            f"📅 **Vuelve mañana ({nombre_dia_manana})**\n"
-            f"⏰ Horario: {horario_manana['apertura'].strftime('%H:%M')} - "
-            f"{horario_manana['cierre'].strftime('%H:%M')}\n\n"
-            f"💡 Podrás disfrutar de tu visita con más tiempo"
+            f"🌙 El museo ya cerró por hoy\n\n"
+            f"📅 Te recomendamos volver mañana ({nombre_dia_manana})\n\n"
+            f"Podrás disfrutar el museo con más tiempo para explorar.\n\n"
+            f"🕐 Horario de mañana ({nombre_dia_manana}): "
+            f"{horario_manana['apertura'].strftime('%H:%M')} - {horario_manana['cierre'].strftime('%H:%M')}"
         )
         
         return False, mensaje, {
@@ -162,18 +178,16 @@ def validar_horario_museo(
         }
     
     # ============================================
-    # CASO 4: ABIERTO - Calcular tiempo disponible
+    # CASO 4: ABIERTO
     # ============================================
-    
-    # Calcular minutos hasta el cierre
     minutos_hasta_cierre = (
         datetime.combine(fecha_hora_actual.date(), horario_hoy['cierre']) -
         datetime.combine(fecha_hora_actual.date(), hora_actual)
     ).total_seconds() / 60
     
     mensaje = (
-        f"✅ El museo está abierto\n"
-        f"⏰ Tienes **{int(minutos_hasta_cierre)} minutos** hasta el cierre "
+        f"✅ El museo está abierto\n\n"
+        f"⏰ Tienes {int(minutos_hasta_cierre)} minutos hasta el cierre "
         f"({horario_hoy['cierre'].strftime('%H:%M')})"
     )
     
@@ -223,7 +237,6 @@ def ajustar_itinerario_por_tiempo(
     if fecha_hora_actual is None:
         fecha_hora_actual = datetime.now()
     
-    # Validar que el museo esté abierto
     esta_abierto, mensaje_horario, info = validar_horario_museo(fecha_hora_actual)
     
     if not esta_abierto:
@@ -235,14 +248,6 @@ def ajustar_itinerario_por_tiempo(
     # CASO 1: Menos de 30 minutos para cerrar
     # ============================================
     if minutos_disponibles < TIEMPO_MINIMO_VISITA:
-        mensaje = (
-            f"⏰ **El museo cerrará muy pronto** (en {minutos_disponibles} minutos)\n\n"
-            f"😔 No hay tiempo suficiente para una visita significativa.\n\n"
-            f"📅 **Te recomendamos volver en otro momento**\n"
-            f"Podrás disfrutar el museo con calma y aprovechar todas las áreas.\n\n"
-        )
-        
-        # Agregar info del siguiente día
         dias_hasta_apertura = 1
         fecha_apertura = fecha_hora_actual + timedelta(days=dias_hasta_apertura)
         
@@ -253,10 +258,13 @@ def ajustar_itinerario_por_tiempo(
         horario_manana = obtener_horario_dia(fecha_apertura.weekday())
         nombre_dia_manana = obtener_nombre_dia(fecha_apertura.weekday())
         
-        mensaje += (
-            f"⏰ **Horario de mañana ({nombre_dia_manana}):**\n"
-            f"{horario_manana['apertura'].strftime('%H:%M')} - "
-            f"{horario_manana['cierre'].strftime('%H:%M')}"
+        mensaje = (
+            f"🚫 El museo cerrará muy pronto (en {minutos_disponibles} minutos)\n\n"
+            f"😔 No hay tiempo suficiente para una visita significativa\n\n"
+            f"📅 Te recomendamos volver en otro momento\n\n"
+            f"Podrás disfrutar el museo con calma y aprovechar todas las áreas.\n\n"
+            f"🕐 Horario de mañana ({nombre_dia_manana}): "
+            f"{horario_manana['apertura'].strftime('%H:%M')} - {horario_manana['cierre'].strftime('%H:%M')}"
         )
         
         return False, None, mensaje
@@ -265,73 +273,57 @@ def ajustar_itinerario_por_tiempo(
     # CASO 2: Sin límite de tiempo solicitado
     # ============================================
     if duracion_solicitada is None:
-        # Usuario dijo "no tengo prisa" pero el museo va a cerrar
-        
-        # Si hay más de 240 minutos (4 horas), puede hacer recorrido completo
         if minutos_disponibles >= 240:
             mensaje = (
-                f"✅ **Perfecto**\n"
-                f"Tienes {minutos_disponibles} minutos hasta el cierre.\n"
+                f"✅ Tiempo suficiente\n\n"
+                f"Tienes {minutos_disponibles} minutos hasta el cierre.\n\n"
                 f"Te generaré el recorrido completo del museo."
             )
             return True, None, mensaje
         
-        # Si hay entre 60 y 240 minutos, ofrecer recorrido parcial
         elif minutos_disponibles >= 60:
-            mensaje = (
-                f"⏰ **Tiempo limitado**\n\n"
-                f"El museo cerrará a las {info['hora_cierre']} "
-                f"(en {minutos_disponibles} minutos).\n\n"
-                f"😊 No podrás ver todas las áreas, pero te crearé un itinerario "
-                f"personalizado con las áreas más relevantes según tus intereses.\n\n"
-                f"💡 **Tiempo disponible:** {minutos_disponibles} minutos\n"
-                f"📍 **Áreas sugeridas:** Las más importantes para ti"
-            )
-            # Ajustar a 80% del tiempo disponible (margen de seguridad)
             duracion_ajustada = int(minutos_disponibles * 0.8)
+            mensaje = (
+                f"⏰ Tiempo limitado\n\n"
+                f"El museo cerrará a las {info['hora_cierre']} (en {minutos_disponibles} minutos).\n\n"
+                f"😊 No podrás ver todas las áreas, pero te crearé un itinerario personalizado con las más relevantes.\n\n"
+                f"💡 Tiempo disponible: {minutos_disponibles} minutos\n\n"
+                f"📍 Áreas sugeridas: Las más importantes para ti"
+            )
             return True, duracion_ajustada, mensaje
         
-        # Si hay menos de 60 minutos, recorrido muy breve
         else:
-            mensaje = (
-                f"⏰ **Tiempo muy limitado**\n\n"
-                f"Solo tienes {minutos_disponibles} minutos hasta el cierre.\n\n"
-                f"😊 Te crearé un recorrido breve con las áreas más destacadas "
-                f"para que tu visita no sea en vano.\n\n"
-                f"💡 **Recomendación:** Considera volver otro día para el recorrido completo"
-            )
             duracion_ajustada = int(minutos_disponibles * 0.8)
+            mensaje = (
+                f"⏰ Tiempo muy limitado\n\n"
+                f"Solo tienes {minutos_disponibles} minutos hasta el cierre.\n\n"
+                f"😊 Te crearé un recorrido breve con las áreas más destacadas.\n\n"
+                f"💡 Recomendación: Considera volver otro día para el recorrido completo"
+            )
             return True, duracion_ajustada, mensaje
     
     # ============================================
     # CASO 3: Usuario especificó tiempo
     # ============================================
     else:
-        # Si el tiempo solicitado es mayor al disponible
         if duracion_solicitada > minutos_disponibles:
-            # Si el exceso es menor a 15 minutos, ajustar silenciosamente
             if duracion_solicitada - minutos_disponibles <= 15:
                 duracion_ajustada = int(minutos_disponibles * 0.9)
                 mensaje = (
-                    f"✅ **Itinerario ajustado**\n"
-                    f"Te generaré un recorrido de {duracion_ajustada} minutos "
-                    f"para que termines antes del cierre."
+                    f"✅ Itinerario ajustado\n\n"
+                    f"Te generaré un recorrido de {duracion_ajustada} minutos para que termines antes del cierre."
                 )
                 return True, duracion_ajustada, mensaje
             
-            # Si el exceso es mayor, informar
             else:
                 duracion_ajustada = int(minutos_disponibles * 0.8)
                 mensaje = (
-                    f"⏰ **Tiempo ajustado**\n\n"
-                    f"Solicitaste {duracion_solicitada} minutos, pero el museo "
-                    f"cerrará en {minutos_disponibles} minutos.\n\n"
-                    f"😊 Te crearé un itinerario de {duracion_ajustada} minutos "
-                    f"con las áreas más relevantes."
+                    f"⏰ Tiempo ajustado\n\n"
+                    f"Solicitaste {duracion_solicitada} minutos, pero el museo cerrará en {minutos_disponibles} minutos.\n\n"
+                    f"😊 Te crearé un itinerario de {duracion_ajustada} minutos con las áreas más relevantes."
                 )
                 return True, duracion_ajustada, mensaje
         
-        # El tiempo solicitado cabe en el disponible
         else:
             mensaje = f"✅ Hay tiempo suficiente para tu visita de {duracion_solicitada} minutos"
             return True, duracion_solicitada, mensaje
@@ -340,9 +332,9 @@ def ajustar_itinerario_por_tiempo(
 def obtener_mensaje_horarios() -> str:
     """Retorna un mensaje formateado con todos los horarios"""
     return (
-        "📅 **Horarios del Museo Pumapungo:**\n\n"
-        "• **Lunes:** Cerrado\n"
-        "• **Martes a Viernes:** 8:00 - 17:00\n"
-        "• **Sábados y Domingos:** 10:00 - 16:00\n\n"
+        "📅 Horarios del Museo Pumapungo:\n\n"
+        "• Lunes: Cerrado\n\n"
+        "• Martes a Viernes: 08:00 - 17:00\n\n"
+        "• Sábados y Domingos: 10:00 - 16:00\n\n"
         "🎫 Entrada gratuita"
     )

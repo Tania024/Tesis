@@ -124,7 +124,7 @@ class Area(Base):
     
     # Ubicación
     piso = Column(Integer, default=1)
-    # ✅ zona ELIMINADO
+    zona = Column(String(50))  # norte, sur, exterior
     
     # Relaciones
     detalles_itinerario = relationship("ItinerarioDetalle", back_populates="area")

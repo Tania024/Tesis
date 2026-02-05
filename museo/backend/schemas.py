@@ -127,7 +127,7 @@ class AreaBase(BaseModel):
     activa: bool = True
     requiere_guia: bool = False
     piso: int = Field(default=1, ge=1, le=5)
-    # ✅ zona ELIMINADO
+    zona: Optional[str] = Field(None, max_length=50)
 
 class AreaCreate(AreaBase):
     pass
@@ -144,7 +144,7 @@ class AreaUpdate(BaseModel):
     activa: Optional[bool] = None
     requiere_guia: Optional[bool] = None
     piso: Optional[int] = Field(None, ge=1, le=5)
-    # ✅ zona ELIMINADO
+    zona: Optional[str] = Field(None, max_length=50)
 
 class AreaResponse(AreaBase):
     id: int
@@ -160,8 +160,8 @@ class ItinerarioBase(BaseModel):
     titulo: Optional[str] = Field(None, max_length=200)
     nivel_detalle: NivelDetalleEnum = NivelDetalleEnum.NORMAL
     # 🔥 NUEVOS CAMPOS: tipo_entrada y acompañantes
-    tipo_entrada: Optional[TipoEntradaEnum] = None
-    acompañantes: int = Field(default=0, ge=0)
+    tipo_entrada: Optional[TipoEntradaEnum] = TipoEntradaEnum.INDIVIDUAL  # ← Optional
+    acompañantes: Optional[int] = Field(default=0, ge=0, le=50)           # ← Optional
 
 class ItinerarioCreate(ItinerarioBase):
     perfil_id: int

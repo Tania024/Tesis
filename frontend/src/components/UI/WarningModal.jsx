@@ -1,4 +1,6 @@
 // components/UI/WarningModal.jsx
+// ✅ CORREGIDO - Respeta saltos de línea \n
+
 import { useEffect } from 'react';
 
 const WarningModal = ({ isOpen, message, onClose }) => {
@@ -44,8 +46,8 @@ const WarningModal = ({ isOpen, message, onClose }) => {
             </h2>
           </div>
 
-          {/* Mensaje */}
-          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-5 text-yellow-900 text-center leading-relaxed font-medium">
+          {/* Mensaje - ✅ CORREGIDO: Respeta saltos de línea */}
+          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-5 text-yellow-900 leading-relaxed font-medium whitespace-pre-line">
             {message}
           </div>
 

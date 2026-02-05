@@ -521,6 +521,34 @@ JSON:
             }
         except Exception as e:
             return {"conectado": False, "error": str(e)}
+        
+
+
+    def generar_itinerario(
+        self,
+        visitante_nombre: str,
+        intereses: List[str],
+        tiempo_disponible: Optional[int],
+        nivel_detalle: str,
+        areas_disponibles: List[Dict[str, Any]],
+        incluir_descansos: bool = True
+    ) -> Dict[str, Any]:
+        """
+        🔥 MÉTODO ALIAS PARA COMPATIBILIDAD
+        Llama a generar_itinerario_progresivo sin background thread
+        """
+        logger.info(f"📞 Llamando método alias generar_itinerario")
+        
+        return self.generar_itinerario_progresivo(
+            visitante_nombre=visitante_nombre,
+            intereses=intereses,
+            tiempo_disponible=tiempo_disponible,
+            nivel_detalle=nivel_detalle,
+            areas_disponibles=areas_disponibles,
+            incluir_descansos=incluir_descansos,
+            db_session=None,  # Sin background thread
+            itinerario_id=None
+        )    
 
 
 # Instancia

@@ -211,15 +211,17 @@ export const itinerariosAPI = {
     return response.data;
   },
   generarProgresivo: async (visitanteId, datos) => {
-    try {
-      const response = await api.post('/ia/generar-itinerario-progresivo', {
-        visitante_id: visitanteId,
-        intereses: datos.intereses || [],
-        tiempo_disponible: datos.tiempo_disponible || null,
-        nivel_detalle: datos.nivel_detalle || 'normal',
-        incluir_descansos: datos.incluir_descansos !== false,
-        areas_evitar: datos.areas_evitar || []
-      });
+  try {
+    const response = await api.post('/itinerarios/generar', {  // ← CAMBIAR URL
+      visitante_id: visitanteId,
+      intereses: datos.intereses || [],
+      tiempo_disponible: datos.tiempo_disponible || null,
+      nivel_detalle: datos.nivel_detalle || 'normal',
+      tipo_entrada: datos.tipo_entrada || 'individual',     // ← AGREGAR
+      acompanantes: datos.acompanantes || 0,                // ← AGREGAR (sin ñ)
+      incluir_descansos: datos.incluir_descansos !== false,
+      areas_evitar: datos.areas_evitar || []
+    });
       
       console.log('✅ Primera área generada, resto en progreso');
       return response.data;
