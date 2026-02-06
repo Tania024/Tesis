@@ -1,5 +1,6 @@
 # services/ia_service.py
-# 🔥 VERSIÓN HÍBRIDA: KB + Web Search como fallback
+# 🔥 VERSIÓN HÍBRIDA: Ollama (local) + DeepSeek API (producción)
+# Usa AI_PROVIDER del .env para elegir el proveedor
 
 import requests
 import json
@@ -15,23 +16,154 @@ from config import get_settings
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
+
 class IAGenerativaService:
     """
-    Servicio HÍBRIDO:
-    1. Intenta usar knowledge base
-    2. Si es insuficiente, busca en web
-    3. Combina ambas fuentes
+    Servicio HÍBRIDO con soporte dual:
+    - AI_PROVIDER=ollama  → Usa Ollama local (desarrollo)
+    - AI_PROVIDER=deepseek → Usa DeepSeek API (producción)
     """
     
     def __init__(self):
-        self.base_url = settings.OLLAMA_BASE_URL
-        self.model = settings.OLLAMA_MODEL
-        self.timeout = settings.OLLAMA_TIMEOUT
-        self.temperature = getattr(settings, 'OLLAMA_TEMPERATURE', 0.7)
+        # 🔥 NUEVO: Detectar proveedor
+        self.provider = getattr(settings, 'AI_PROVIDER', 'ollama').lower()
         
-        # 🔥 CARGAR KNOWLEDGE BASE
+        if self.provider == "deepseek":
+            # ============================================
+            # CONFIGURACIÓN DEEPSEEK
+            # ============================================
+            self.api_key = settings.DEEPSEEK_API_KEY
+            self.model = getattr(settings, 'DEEPSEEK_MODEL', 'deepseek-chat')
+            self.base_url = getattr(settings, 'DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
+            self.timeout = getattr(settings, 'AI_TIMEOUT', 420)
+            self.temperature = getattr(settings, 'AI_TEMPERATURE', 0.25)
+            
+            if not self.api_key:
+                logger.error("❌ DEEPSEEK_API_KEY no configurada!")
+                raise ValueError("DEEPSEEK_API_KEY es requerida cuando AI_PROVIDER=deepseek")
+            
+            logger.info(f"🤖 IA Provider: DEEPSEEK API ({self.model})")
+        else:
+            # ============================================
+            # CONFIGURACIÓN OLLAMA (por defecto)
+            # ============================================
+            self.base_url = settings.OLLAMA_BASE_URL
+            self.model = settings.OLLAMA_MODEL
+            self.timeout = settings.OLLAMA_TIMEOUT
+            self.temperature = getattr(settings, 'OLLAMA_TEMPERATURE', 0.7)
+            
+            logger.info(f"🤖 IA Provider: OLLAMA ({self.model})")
+        
+        # 🔥 CARGAR KNOWLEDGE BASE (funciona con ambos proveedores)
         self.knowledge_base = self._cargar_knowledge_base()
+    
+    # ============================================
+    # 🔥 NUEVO: MÉTODO UNIFICADO PARA LLAMAR A LA IA
+    # ============================================
+    
+    def _llamar_ia(self, prompt: str, max_tokens: int = 1800, temperature: float = None, json_mode: bool = True) -> str:
+        """
+        🔥 MÉTODO CENTRAL: Llama a Ollama o DeepSeek según AI_PROVIDER
+        Retorna el texto de respuesta de la IA
+        """
+        temp = temperature if temperature is not None else self.temperature
         
+        if self.provider == "deepseek":
+            return self._llamar_deepseek(prompt, max_tokens, temp, json_mode)
+        else:
+            return self._llamar_ollama(prompt, max_tokens, temp, json_mode)
+    
+    def _llamar_deepseek(self, prompt: str, max_tokens: int, temperature: float, json_mode: bool) -> str:
+        """Llamada a DeepSeek API (compatible con OpenAI)"""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Eres un guía experto del Museo Pumapungo en Cuenca, Ecuador. Responde SOLO en JSON válido, sin texto adicional, sin markdown, sin ```json."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": False
+        }
+        
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+        
+        try:
+            logger.info(f"📡 DeepSeek API: enviando request ({max_tokens} tokens max)...")
+            
+            response = requests.post(
+                f"{self.base_url}/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=self.timeout
+            )
+            
+            response.raise_for_status()
+            data = response.json()
+            
+            texto = data["choices"][0]["message"]["content"]
+            tokens_usados = data.get("usage", {})
+            
+            logger.info(f"✅ DeepSeek respondió: {tokens_usados.get('total_tokens', '?')} tokens")
+            return texto
+            
+        except requests.exceptions.HTTPError as e:
+            error_detail = ""
+            try:
+                error_detail = e.response.json()
+            except:
+                error_detail = e.response.text
+            logger.error(f"❌ DeepSeek HTTP Error: {e.response.status_code} - {error_detail}")
+            raise
+        except Exception as e:
+            logger.error(f"❌ DeepSeek Error: {e}")
+            raise
+    
+    def _llamar_ollama(self, prompt: str, max_tokens: int, temperature: float, json_mode: bool) -> str:
+        """Llamada a Ollama local"""
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens
+            }
+        }
+        
+        if json_mode:
+            payload["format"] = "json"
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=self.timeout
+            )
+            
+            response.raise_for_status()
+            return response.json().get("response", "")
+            
+        except Exception as e:
+            logger.error(f"❌ Ollama Error: {e}")
+            raise
+    
+    # ============================================
+    # KNOWLEDGE BASE (sin cambios)
+    # ============================================
+    
     def _cargar_knowledge_base(self) -> Dict[str, Any]:
         """Cargar información real del museo desde JSON"""
         try:
@@ -51,7 +183,7 @@ class IAGenerativaService:
                     logger.info(f"✅ Knowledge base cargada: {areas_count} areas")
                     return kb
             
-            logger.warning("⚠️ No se encontro museo_knowledge.json - usará web search")
+            logger.warning("⚠️ No se encontró museo_knowledge.json")
             return {"areas": {}}
         
         except Exception as e:
@@ -66,7 +198,6 @@ class IAGenerativaService:
         area_info = self.knowledge_base["areas"].get(area_codigo, {})
         
         if area_info:
-            # Verificar si tiene suficiente contenido
             datos = len(area_info.get('datos_curiosos', []))
             objetos = len(area_info.get('objetos_destacados', []))
             info_det = len(area_info.get('informacion_detallada', []))
@@ -76,25 +207,14 @@ class IAGenerativaService:
                 return area_info
             else:
                 logger.warning(f"⚠️ KB insuficiente para {area_codigo}: {datos} datos, {objetos} objetos")
-                return area_info  # Lo devuelve igual, pero se complementará con web
+                return area_info
         else:
             logger.warning(f"⚠️ Sin KB para {area_codigo}")
             return {}
     
-    def _buscar_info_web_simple(self, nombre_area: str, museo: str = "Museo Pumapungo") -> str:
-        """
-        Buscar información básica en web sobre un área
-        NOTA: Este es un ejemplo simplificado sin web_search
-        En producción, usarías la API de web_search
-        """
-        try:
-            # Por ahora, retorna string vacío
-            # En producción, aquí irían las llamadas a web_search
-            logger.info(f"🌐 Web search deshabilitado - usando solo KB")
-            return ""
-        except Exception as e:
-            logger.error(f"❌ Error en web search: {e}")
-            return ""
+    # ============================================
+    # GENERACIÓN PROGRESIVA (actualizado para usar _llamar_ia)
+    # ============================================
     
     def generar_itinerario_progresivo(
         self,
@@ -107,32 +227,23 @@ class IAGenerativaService:
         db_session=None,
         itinerario_id: int = None
     ) -> Dict[str, Any]:
-        """
-        🔥 MÉTODO PROGRESIVO HÍBRIDO
-        """
+        """🔥 MÉTODO PROGRESIVO HÍBRIDO — Funciona con Ollama y DeepSeek"""
         tiempo_inicio = datetime.now()
         
         tiene_kb = bool(self.knowledge_base and self.knowledge_base.get("areas"))
-        logger.info(f"🚀 HÍBRIDO: Generando para {visitante_nombre} (nivel: {nivel_detalle}, KB: {tiene_kb})")
+        logger.info(f"🚀 HÍBRIDO [{self.provider.upper()}]: Generando para {visitante_nombre} (nivel: {nivel_detalle}, KB: {tiene_kb})")
         
         # PASO 1: Generar estructura básica
         logger.info("📋 PASO 1: Generando estructura...")
         estructura = self._generar_estructura_base(
-            visitante_nombre,
-            intereses,
-            tiempo_disponible,
-            areas_disponibles
+            visitante_nombre, intereses, tiempo_disponible, areas_disponibles
         )
         
         # PASO 2: Generar SOLO primera área con contenido completo
         logger.info("📝 PASO 2: Generando primera área completa...")
         primera_area = self._generar_area_individual_hibrida(
-            estructura['areas'][0],
-            areas_disponibles,
-            visitante_nombre,
-            intereses,
-            nivel_detalle,
-            es_primera=True
+            estructura['areas'][0], areas_disponibles,
+            visitante_nombre, intereses, nivel_detalle, es_primera=True
         )
         
         # PASO 3: Marcar resto como "generando"
@@ -156,6 +267,7 @@ class IAGenerativaService:
             "areas": areas_resultado,
             "metadata": {
                 "modelo": self.model,
+                "provider": self.provider,  # 🔥 NUEVO
                 "temperature": 0.1,
                 "nivel_detalle": nivel_detalle,
                 "tiempo_primera_area": f"{tiempo_primera:.2f}s",
@@ -166,7 +278,7 @@ class IAGenerativaService:
             }
         }
         
-        logger.info(f"✅ Primera área lista en {tiempo_primera:.1f}s")
+        logger.info(f"✅ Primera área lista en {tiempo_primera:.1f}s [{self.provider}]")
         
         # PASO 4: Lanzar generación del resto en background
         if db_session and itinerario_id:
@@ -174,13 +286,8 @@ class IAGenerativaService:
             thread = threading.Thread(
                 target=self._generar_resto_areas_background,
                 args=(
-                    itinerario_id,
-                    estructura['areas'][1:],
-                    areas_disponibles,
-                    visitante_nombre,
-                    intereses,
-                    nivel_detalle,
-                    db_session
+                    itinerario_id, estructura['areas'][1:], areas_disponibles,
+                    visitante_nombre, intereses, nivel_detalle, db_session
                 ),
                 daemon=True
             )
@@ -189,15 +296,11 @@ class IAGenerativaService:
         return resultado
     
     def _generar_estructura_base(
-        self,
-        visitante_nombre: str,
-        intereses: List[str],
-        tiempo_disponible: Optional[int],
-        areas_disponibles: List[Dict[str, Any]]
+        self, visitante_nombre, intereses, tiempo_disponible, areas_disponibles
     ) -> Dict[str, Any]:
         """Genera estructura básica"""
         
-        # 🔥 SI NO HAY LÍMITE DE TIEMPO, USAR TODAS LAS ÁREAS DIRECTAMENTE
+        # SI NO HAY LÍMITE DE TIEMPO, USAR TODAS LAS ÁREAS
         if not tiempo_disponible:
             logger.info(f"✅ Sin límite de tiempo - Usando TODAS las {len(areas_disponibles)} áreas")
             
@@ -227,14 +330,13 @@ class IAGenerativaService:
         ])
         
         intereses_texto = ", ".join(intereses) if intereses else "generales"
-        instruccion = f"Selecciona 3-5 areas que sumen aprox {tiempo_disponible} minutos. USA los tiempos indicados."
         
         prompt = f"""Selecciona areas para itinerario del Museo Pumapungo.
 
 VISITANTE: {visitante_nombre}
 INTERESES: {intereses_texto}
 AREAS: {areas_texto}
-TAREA: {instruccion}
+TAREA: Selecciona 3-5 areas que sumen aprox {tiempo_disponible} minutos. USA los tiempos indicados.
 
 Responde SOLO JSON:
 {{
@@ -245,40 +347,19 @@ Responde SOLO JSON:
 }}"""
         
         try:
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                    "options": {"temperature": 0.1, "num_predict": 500}
-                },
-                timeout=30
-            )
-            
-            response.raise_for_status()
-            return self._extraer_json(response.json().get("response", ""))
+            # 🔥 USAR MÉTODO UNIFICADO
+            respuesta = self._llamar_ia(prompt, max_tokens=500, temperature=0.1)
+            return self._extraer_json(respuesta)
             
         except Exception as e:
             logger.error(f"❌ Error estructura: {e}")
             return self._estructura_fallback(areas_disponibles, tiempo_disponible)
 
     def _generar_area_individual_hibrida(
-        self,
-        area_estructura: Dict[str, Any],
-        areas_disponibles: List[Dict[str, Any]],
-        visitante_nombre: str,
-        intereses: List[str],
-        nivel_detalle: str,
-        es_primera: bool = False
+        self, area_estructura, areas_disponibles, visitante_nombre,
+        intereses, nivel_detalle, es_primera=False
     ) -> Dict[str, Any]:
-        """
-        🔥 VERSIÓN HÍBRIDA
-        1. Intenta KB
-        2. Si insuficiente, complementa con info genérica educativa
-        3. Genera contenido rico
-        """
+        """🔥 VERSIÓN HÍBRIDA — Funciona con Ollama y DeepSeek"""
         area_codigo = area_estructura['area_codigo']
         area_info = next((a for a in areas_disponibles if a['codigo'] == area_codigo), None)
         
@@ -292,16 +373,9 @@ Responde SOLO JSON:
         # 2. Evaluar si es suficiente
         datos_kb = info_kb.get('datos_curiosos', []) if info_kb else []
         objetos_kb = info_kb.get('objetos_destacados', []) if info_kb else []
-        info_det_kb = info_kb.get('informacion_detallada', []) if info_kb else []
         
         usa_kb = len(datos_kb) >= 3 and len(objetos_kb) >= 3
-        
-        if usa_kb:
-            logger.info(f"✅ Usando KB para {area_codigo}")
-            fuente = "knowledge_base"
-        else:
-            logger.warning(f"⚠️ KB insuficiente para {area_codigo} - generando contenido educativo")
-            fuente = "generativo"
+        fuente = "knowledge_base" if usa_kb else "generativo"
         
         # Ajustar extensión
         if nivel_detalle == "profundo":
@@ -315,35 +389,22 @@ Responde SOLO JSON:
         
         # Construir prompt
         if usa_kb:
-            # PROMPT CON KB
             prompt = self._construir_prompt_con_kb(
                 area_info, info_kb, visitante_nombre, intereses,
                 nivel_detalle, num_datos, num_observar, es_primera
             )
         else:
-            # PROMPT GENERATIVO EDUCATIVO
             prompt = self._construir_prompt_generativo(
                 area_info, visitante_nombre, intereses,
                 nivel_detalle, num_datos, num_observar, es_primera
             )
         
         try:
-            logger.info(f"📝 Generando '{area_info['nombre']}' ({fuente}, {nivel_detalle})...")
+            logger.info(f"📝 Generando '{area_info['nombre']}' ({fuente}, {nivel_detalle}) [{self.provider}]...")
             
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                    "options": {"temperature": 0.2, "num_predict": num_predict}
-                },
-                timeout=120
-            )
-            
-            response.raise_for_status()
-            contenido = self._extraer_json(response.json().get("response", ""))
+            # 🔥 USAR MÉTODO UNIFICADO
+            respuesta = self._llamar_ia(prompt, max_tokens=num_predict, temperature=0.2)
+            contenido = self._extraer_json(respuesta)
             
             logger.info(f"✅ '{area_info['nombre']}' generada ({len(contenido.get('datos_curiosos', []))} datos)")
             
@@ -397,7 +458,7 @@ JSON:
 }}"""
     
     def _construir_prompt_generativo(self, area_info, visitante, intereses, nivel, num_datos, num_obs, primera):
-        """Prompt cuando NO hay KB suficiente - contenido educativo general"""
+        """Prompt cuando NO hay KB suficiente"""
         return f"""Genera contenido educativo para {area_info['nombre']} del Museo Pumapungo.
 
 ÁREA: {area_info['nombre']}
@@ -426,10 +487,10 @@ JSON:
     
     def _generar_resto_areas_background(self, itinerario_id, areas_pendientes, areas_disponibles,
                                        visitante_nombre, intereses, nivel_detalle, db_session):
-        """Background thread"""
+        """Background thread — funciona con ambos proveedores"""
         from models import ItinerarioDetalle
         
-        logger.info(f"🔄 Background: {len(areas_pendientes)} áreas")
+        logger.info(f"🔄 Background [{self.provider}]: {len(areas_pendientes)} áreas")
         
         for idx, area_pendiente in enumerate(areas_pendientes, start=2):
             try:
@@ -452,15 +513,18 @@ JSON:
                     db_session.commit()
                     logger.info(f"✅ [{idx}/{len(areas_pendientes)+1}] guardada")
                 
-                time.sleep(2)
+                time.sleep(1)  # Menor delay con DeepSeek (es más rápido)
             except Exception as e:
                 logger.error(f"❌ Error área {idx}: {e}")
                 db_session.rollback()
         
-        logger.info(f"🎉 Completado itinerario {itinerario_id}")
+        logger.info(f"🎉 Completado itinerario {itinerario_id} [{self.provider}]")
+    
+    # ============================================
+    # UTILIDADES (sin cambios significativos)
+    # ============================================
     
     def _estructura_fallback(self, areas_disponibles, tiempo_disponible):
-        """Fallback"""
         areas_sel = areas_disponibles[:4]
         return {
             "titulo": "Recorrido Museo Pumapungo",
@@ -473,7 +537,6 @@ JSON:
         }
     
     def _area_fallback(self, area_estructura, area_info):
-        """Fallback"""
         return {
             **area_estructura,
             "introduccion": f"Bienvenido a {area_info['nombre']}",
@@ -485,7 +548,7 @@ JSON:
         }
     
     def _extraer_json(self, respuesta: str) -> Dict[str, Any]:
-        """Extraer JSON"""
+        """Extraer JSON de la respuesta"""
         if '<think>' in respuesta:
             respuesta = re.sub(r'<think>.*?</think>', '', respuesta, flags=re.DOTALL)
         
@@ -505,40 +568,81 @@ JSON:
         raise ValueError("No se pudo extraer JSON")
     
     def verificar_conexion(self) -> Dict[str, Any]:
-        """Verificar sistema"""
-        try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            response.raise_for_status()
-            
-            tiene_kb = bool(self.knowledge_base and self.knowledge_base.get("areas"))
-            
-            return {
-                "conectado": True,
-                "modelo": self.model,
-                "knowledge_base_cargada": tiene_kb,
-                "areas_kb": len(self.knowledge_base.get("areas", {})),
-                "modo": "hibrido"
-            }
-        except Exception as e:
-            return {"conectado": False, "error": str(e)}
+        """🔥 ACTUALIZADO: Verificar conexión según proveedor"""
+        tiene_kb = bool(self.knowledge_base and self.knowledge_base.get("areas"))
         
-
+        if self.provider == "deepseek":
+            try:
+                # Verificar con una llamada pequeña
+                headers = {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
+                }
+                response = requests.post(
+                    f"{self.base_url}/v1/chat/completions",
+                    headers=headers,
+                    json={
+                        "model": self.model,
+                        "messages": [{"role": "user", "content": "ping"}],
+                        "max_tokens": 5
+                    },
+                    timeout=10
+                )
+                response.raise_for_status()
+                
+                return {
+                    "conectado": True,
+                    "provider": "deepseek",
+                    "modelo": self.model,
+                    "modelo_configurado": self.model,
+                    "modelo_disponible": True,
+                    "knowledge_base_cargada": tiene_kb,
+                    "areas_kb": len(self.knowledge_base.get("areas", {})),
+                    "modo": "hibrido"
+                }
+            except Exception as e:
+                return {
+                    "conectado": False,
+                    "provider": "deepseek",
+                    "error": str(e),
+                    "modelo_configurado": self.model,
+                    "modelo_disponible": False
+                }
+        else:
+            # Ollama
+            try:
+                response = requests.get(f"{self.base_url}/api/tags", timeout=5)
+                response.raise_for_status()
+                
+                modelos = response.json().get("models", [])
+                modelo_disponible = any(
+                    self.model in m.get("name", "") for m in modelos
+                )
+                
+                return {
+                    "conectado": True,
+                    "provider": "ollama",
+                    "modelo": self.model,
+                    "modelo_configurado": self.model,
+                    "modelo_disponible": modelo_disponible,
+                    "knowledge_base_cargada": tiene_kb,
+                    "areas_kb": len(self.knowledge_base.get("areas", {})),
+                    "modo": "hibrido"
+                }
+            except Exception as e:
+                return {
+                    "conectado": False,
+                    "provider": "ollama",
+                    "error": str(e),
+                    "modelo_configurado": self.model,
+                    "modelo_disponible": False
+                }
 
     def generar_itinerario(
-        self,
-        visitante_nombre: str,
-        intereses: List[str],
-        tiempo_disponible: Optional[int],
-        nivel_detalle: str,
-        areas_disponibles: List[Dict[str, Any]],
-        incluir_descansos: bool = True
+        self, visitante_nombre, intereses, tiempo_disponible,
+        nivel_detalle, areas_disponibles, incluir_descansos=True
     ) -> Dict[str, Any]:
-        """
-        🔥 MÉTODO ALIAS PARA COMPATIBILIDAD
-        Llama a generar_itinerario_progresivo sin background thread
-        """
-        logger.info(f"📞 Llamando método alias generar_itinerario")
-        
+        """Método alias para compatibilidad"""
         return self.generar_itinerario_progresivo(
             visitante_nombre=visitante_nombre,
             intereses=intereses,
@@ -546,9 +650,9 @@ JSON:
             nivel_detalle=nivel_detalle,
             areas_disponibles=areas_disponibles,
             incluir_descansos=incluir_descansos,
-            db_session=None,  # Sin background thread
+            db_session=None,
             itinerario_id=None
-        )    
+        )
 
 
 # Instancia

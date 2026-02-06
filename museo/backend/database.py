@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # ============================================
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.DATABASE_URL_COMPUTED,
     echo=settings.DEBUG,  # Mostrar SQL queries solo en debug
     future=True,
     pool_size=10,  # Número de conexiones en el pool

@@ -7,8 +7,8 @@ pydantic==2.8.0
 pydantic-settings==2.1.0
 python-dotenv==1.0.0
 
-# IA Generativa
-ollama==0.1.0
+# HTTP requests (para Ollama Y DeepSeek API)
+requests==2.31.0
 httpx==0.25.2
 
 # Utilidades
@@ -17,8 +17,8 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 email-validator==2.1.0
 
-# CORS
-fastapi-cors==0.0.6
-
 # Logging y monitoreo
 python-json-logger==2.0.7
+
+# Servidor producción
+gunicorn==21.2.0
