@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 // Configuración base
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'https://museo-api-o2xf.onrender.com/api/v1';
 
 // Instancia de axios con configuración base
 const api = axios.create({
