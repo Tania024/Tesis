@@ -16,7 +16,7 @@ const Login = () => {
   // Prevenir procesamiento múltiple
   const callbackProcessed = useRef(false);
 
-  // ✅ Procesar callback de Google SOLO UNA VEZ
+  // ✅ CORREGIDO: Procesar callback de Google
   useEffect(() => {
     const processGoogleCallback = async () => {
       // Obtener parámetros del callback
@@ -24,7 +24,7 @@ const Login = () => {
       const nombre = searchParams.get('nombre');
       const email = searchParams.get('email');
       const success = searchParams.get('success');
-      const datosCompletos = searchParams.get('datos_completos'); // ✅ NUEVO
+      const datosCompletos = searchParams.get('datos_completos');
       const errorParam = searchParams.get('error');
 
       // Si hay error en el callback
@@ -44,30 +44,34 @@ const Login = () => {
         callbackProcessed.current = true;
         setProcessingCallback(true);
 
-        // Crear objeto de usuario
-        const userData = {
-          visitante_id: parseInt(visitanteId),
-          nombre: nombre,
-          email: email,
-          datos_completos: datosCompletos === 'true' // ✅ NUEVO
-        };
+        try {
+          // Crear objeto de usuario
+          const userData = {
+            visitante_id: parseInt(visitanteId),
+            nombre: nombre,
+            email: email,
+            datos_completos: datosCompletos === 'true'
+          };
 
-        // ✅ Guardar con AuthContext
-        loginWithGoogle(userData);
+          // ✅ Guardar con AuthContext
+          loginWithGoogle(userData);
+          console.log('✅ Usuario guardado en sesión');
 
-        // Limpiar URL (quitar parámetros del callback)
-        window.history.replaceState({}, document.title, '/login');
+          // ✅ ESPERAR UN MOMENTO para asegurar que se guardó
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Esperar un poco antes de redirigir
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // ✅ REDIRIGIR SEGÚN SI TIENE DATOS COMPLETOS
-        if (datosCompletos === 'true') {
-          console.log('↪️ Redirigiendo a generar itinerario...');
-          navigate('/generar-itinerario', { replace: true });
-        } else {
-          console.log('↪️ Redirigiendo a completar perfil...');
-          navigate('/completar-perfil', { replace: true });
+          // ✅ REDIRIGIR INMEDIATAMENTE (sin limpiar URL antes)
+          if (datosCompletos === 'true') {
+            console.log('↪️ Redirigiendo a generar itinerario...');
+            navigate('/generar-itinerario', { replace: true });
+          } else {
+            console.log('↪️ Redirigiendo a completar perfil...');
+            navigate('/completar-perfil', { replace: true });
+          }
+        } catch (err) {
+          console.error('❌ Error procesando callback:', err);
+          setError('Error al procesar autenticación');
+          setProcessingCallback(false);
         }
       }
     };
@@ -75,25 +79,21 @@ const Login = () => {
     processGoogleCallback();
   }, [searchParams, loginWithGoogle, navigate]);
 
-  // Redirigir si ya está autenticado (sin callback en proceso)
+  // ✅ CORREGIDO: Redirigir si ya está autenticado
   useEffect(() => {
-    if (isAuthenticated && !callbackProcessed.current && !searchParams.get('visitante_id')) {
+    // Solo verificar si NO hay callback en proceso
+    if (isAuthenticated && !searchParams.get('visitante_id')) {
       console.log('✅ Usuario ya autenticado, redirigiendo...');
       navigate('/generar-itinerario', { replace: true });
     }
   }, [isAuthenticated, navigate, searchParams]);
 
-  // ✅ CORREGIDO: Usar authAPI.loginWithGoogle() que SÍ existe
   const handleGoogleLogin = () => {
     try {
       setLoading(true);
       setError(null);
-      
       console.log('🔐 Iniciando login con Google...');
-      
-      // ✅ Método correcto (redirige automáticamente)
       authAPI.loginWithGoogle();
-      
     } catch (err) {
       console.error('❌ Error iniciando login:', err);
       setError('Error al conectar con Google. Inténtalo de nuevo.');
@@ -111,8 +111,8 @@ const Login = () => {
             <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-50 border border-green-200 rounded-lg">
               <span className="text-2xl">✅</span>
               <div className="text-left">
-                <p className="text-green-800 font-semibold">¡Bienvenido de vuelta!</p>
-                <p className="text-green-600 text-sm">Iniciando sesión...</p>
+                <p className="text-green-800 font-semibold">¡Bienvenido!</p>
+                <p className="text-green-600 text-sm">Configurando tu sesión...</p>
               </div>
             </div>
           </div>
@@ -136,9 +136,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white flex items-center justify-center px-4">
       <div className="max-w-md w-full">
-        {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Logo */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-gradient-to-br from-museo-brown to-museo-gold rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-white font-bold text-3xl">MP</span>
@@ -151,14 +149,12 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <p className="text-red-700 text-sm">{error}</p>
             </div>
           )}
 
-          {/* Google Login Button */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -173,7 +169,6 @@ const Login = () => {
             <span>Continuar con Google</span>
           </button>
 
-          {/* Info */}
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-600 text-center mb-4">
               Al iniciar sesión, autorizas el acceso a:
@@ -194,7 +189,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Link alternativo */}
         <p className="text-center mt-6 text-gray-600">
           ¿Solo quieres explorar?{' '}
           <button
