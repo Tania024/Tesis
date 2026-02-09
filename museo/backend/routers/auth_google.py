@@ -95,7 +95,6 @@ async def google_callback(
             visitante.pais_origen is not None,
             visitante.ciudad_origen is not None,
             visitante.tipo_visitante is not None,
-            visitante.tipo_entrada is not None
         ])
 
         # 4. Analizar intereses con IA
