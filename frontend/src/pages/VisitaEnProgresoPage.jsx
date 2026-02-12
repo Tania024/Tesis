@@ -376,36 +376,35 @@ const handleEnviarEvaluacion = async (evaluacion) => {
                   )}
 
                   {/* Fila 2: Botones Marcar y Saltar */}
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => handleMarcarVisitada(areaActual.id)}
-                      className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-700 hover:to-blue-700 transition-all shadow-lg flex items-center justify-center gap-2"
-                    >
-                      <span>✅</span>
-                      <span>Marcar como Visitada</span>
-                    </button>
-                    
-                    
-                    {/* 🔥 BOTÓN DE REFRESCAR */}
-                    <button
-                      onClick={() => {
-                        console.log('🔄 Refrescando contenido...');
-                        cargarItinerario();
-                      }}
-                      className="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-md"
-                      title="Refrescar para ver contenido actualizado"
-                    >
-                      <span>🔄</span>
-                      <span>Refrescar</span>
-                    </button>
-                    <button
-                      onClick={() => handleSaltarArea(areaActual.id)}
-                      className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
-                    >
-                      <span>⏭️</span>
-                      <span>Saltar</span>
-                    </button>
-                  </div>
+                  <div className="space-y-3">
+  {/* Marcar como Visitada - ocupa toda la fila */}
+  <button
+    onClick={() => handleMarcarVisitada(areaActual.id)}
+    className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-700 hover:to-blue-700 transition-all shadow-lg flex items-center justify-center gap-2"
+  >
+    <span>✅</span>
+    <span>Marcar como Visitada</span>
+  </button>
+
+  {/* Refrescar y Saltar - comparten fila */}
+  <div className="grid grid-cols-2 gap-3">
+    <button
+      onClick={() => { console.log('🔄 Refrescando contenido...'); cargarItinerario(); }}
+      className="w-full py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 shadow-md"
+      title="Refrescar para ver contenido actualizado"
+    >
+      <span>🔄</span>
+      <span>Refrescar</span>
+    </button>
+    <button
+      onClick={() => handleSaltarArea(areaActual.id)}
+      className="w-full py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+    >
+      <span>⏭️</span>
+      <span>Saltar</span>
+    </button>
+  </div>
+</div>
                 </div>
               </div>
             ) : todasVisitadas ? (
