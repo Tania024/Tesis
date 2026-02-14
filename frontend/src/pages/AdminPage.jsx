@@ -109,17 +109,20 @@ const AdminPage = () => {
     }
   };
 
-  // ✅ CORREGIDO: Zona horaria Ecuador
-  const formatearFecha = (fecha) => {
-    return new Date(fecha).toLocaleDateString('es-EC', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Guayaquil'  // ✅ Hora de Ecuador
-    });
-  };
+const formatearFecha = (fecha) => {
+  if (!fecha) return 'N/A';
+  const fechaISO = fecha.replace(' ', 'T');
+  const date = new Date(fechaISO);
+  date.setHours(date.getHours() + 3); // ✅ Compensar PST → Ecuador
+  return date.toLocaleString('es-EC', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+};
 
   const formatearTipoVisitante = (tipo) => {
     const tipos = {
@@ -598,16 +601,22 @@ const AdminPage = () => {
                         {ofuscarEmail(visitante.email)}
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          visitante.tipo_visitante === 'internacional'
-                            ? 'bg-purple-100 text-purple-700'
-                            : visitante.tipo_visitante === 'nacional'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {formatearTipoVisitante(visitante.tipo_visitante)}
-                        </span>
-                      </td>
+  {visitante.tipo_visitante ? (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+      visitante.tipo_visitante === 'internacional'
+        ? 'bg-purple-100 text-purple-700'
+        : visitante.tipo_visitante === 'nacional'
+        ? 'bg-blue-100 text-blue-700'
+        : 'bg-green-100 text-green-700'
+    }`}>
+      {formatearTipoVisitante(visitante.tipo_visitante)}
+    </span>
+  ) : (
+    <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+      Sin definir
+    </span>
+  )}
+</td>
                       {/* ✅ CORREGIDO: Edad calculada desde fecha_nacimiento */}
                       <td className="py-3 px-4 text-sm text-gray-600">
                         {calcularEdad(visitante.fecha_nacimiento)}
