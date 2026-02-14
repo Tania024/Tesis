@@ -111,16 +111,16 @@ const AdminPage = () => {
 
 const formatearFecha = (fecha) => {
   if (!fecha) return 'N/A';
-  const fechaISO = fecha.replace(' ', 'T');
-  const date = new Date(fechaISO);
-  date.setHours(date.getHours() + 3); // ✅ Compensar PST → Ecuador
-  return date.toLocaleString('es-EC', {
+  // DB guarda UTC sin 'Z' → agregamos Z → convertimos a Ecuador (UTC-5)
+  const fechaISO = fecha.replace(' ', 'T') + 'Z';
+  return new Date(fechaISO).toLocaleString('es-EC', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: true
+    hour12: true,
+    timeZone: 'America/Guayaquil'  // UTC-5 → resta 5h → 04:30 → 23:30 ✅
   });
 };
 
