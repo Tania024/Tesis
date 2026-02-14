@@ -1,13 +1,5 @@
 // src/pages/AdminPage.jsx
-// ✅ VERSIÓN COMPLETA CON TODO:
-// - Protección de emails
-// - Cálculo correcto de visitantes de hoy
-// - Sección de Evaluaciones
-// - Procesamiento de visitantes
-// - Logs de debugging
-// - ✅ CORREGIDO: Zona horaria Ecuador
-// - ✅ CORREGIDO: Edad calculada desde fecha_nacimiento
-// - ✅ CORREGIDO: Solo 3 estados en itinerarios
+
 
 import { useState, useEffect } from 'react';
 import { visitantesAPI, itinerariosAPI, historialAPI, evaluacionesAPI } from '../services/api';
