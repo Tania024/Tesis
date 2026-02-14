@@ -57,16 +57,17 @@ const VerItinerarioPage = () => {
   };
 
 const formatearFecha = (fecha) => {
-  if (!fecha) return 'N/A';
   return new Date(fecha).toLocaleString('es-EC', {
-    day: '2-digit',
-    month: '2-digit',
+    timeZone: 'America/Guayaquil',
     year: 'numeric',
+    month: 'long',
+    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: true
+    hour12: false
   });
 };
+
 
 
 
