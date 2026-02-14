@@ -190,7 +190,12 @@ const MisItinerariosPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span>📅</span>
-                      <span>{new Date(itinerario.fecha_generacion).toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' })}</span>
+                      <span>{new Date(itinerario.fecha_generacion).toLocaleDateString('es-EC', { 
+  day: '2-digit',
+  month: '2-digit', 
+  year: 'numeric',
+  timeZone: 'America/Guayaquil'
+})}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span>🤖</span>

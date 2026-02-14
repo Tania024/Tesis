@@ -5,6 +5,9 @@
 // - Sección de Evaluaciones
 // - Procesamiento de visitantes
 // - Logs de debugging
+// - ✅ CORREGIDO: Zona horaria Ecuador
+// - ✅ CORREGIDO: Edad calculada desde fecha_nacimiento
+// - ✅ CORREGIDO: Solo 3 estados en itinerarios
 
 import { useState, useEffect } from 'react';
 import { visitantesAPI, itinerariosAPI, historialAPI, evaluacionesAPI } from '../services/api';
@@ -19,7 +22,7 @@ const AdminPage = () => {
   const [estadisticasVisitantes, setEstadisticasVisitantes] = useState(null);
   const [estadisticasItinerarios, setEstadisticasItinerarios] = useState(null);
   const [estadisticasHoy, setEstadisticasHoy] = useState(null);
-  const [estadisticasEvaluaciones, setEstadisticasEvaluaciones] = useState(null); // 🔥 EVALUACIONES
+  const [estadisticasEvaluaciones, setEstadisticasEvaluaciones] = useState(null);
   const [horasPico, setHorasPico] = useState([]);
   const [visitantesRecientes, setVisitantesRecientes] = useState([]);
 
@@ -36,19 +39,18 @@ const AdminPage = () => {
         visitantesStats,
         itinerariosStats,
         hoyStats,
-        evaluacionesStats, // 🔥 EVALUACIONES
+        evaluacionesStats,
         pico,
         visitantesResponse
       ] = await Promise.all([
         visitantesAPI.estadisticas(),
         itinerariosAPI.estadisticas(),
         historialAPI.estadisticasHoy(),
-        evaluacionesAPI.obtenerEstadisticas(), // 🔥 EVALUACIONES
+        evaluacionesAPI.obtenerEstadisticas(),
         historialAPI.horasPico(),
         visitantesAPI.listar({ limit: 10 })
       ]);
 
-      // Logs de debug
       console.log('═══════════════════════════════════════');
       console.log('📊 DEBUG: Respuesta de visitantes');
       console.log('Tipo:', typeof visitantesResponse);
@@ -60,9 +62,8 @@ const AdminPage = () => {
 
       setEstadisticasVisitantes(visitantesStats);
       setEstadisticasItinerarios(itinerariosStats);
-      setEstadisticasEvaluaciones(evaluacionesStats); // 🔥 EVALUACIONES
+      setEstadisticasEvaluaciones(evaluacionesStats);
 
-      // Procesar visitantes con múltiples formatos
       let visitantesArray = [];
 
       if (Array.isArray(visitantesResponse)) {
@@ -88,11 +89,9 @@ const AdminPage = () => {
 
       setVisitantesRecientes(visitantesArray);
 
-      // 🔥 CALCULAR visitantes de hoy en el frontend
       const visitantesHoyCalculado = calcularVisitantesHoy(visitantesArray);
       console.log(`🌟 Visitantes de HOY (calculado en frontend): ${visitantesHoyCalculado}`);
 
-      // Actualizar estadísticas de hoy
       setEstadisticasHoy({
         visitantes_hoy: visitantesHoyCalculado,
         itinerarios_activos: hoyStats?.itinerarios_activos || 0,
@@ -110,13 +109,15 @@ const AdminPage = () => {
     }
   };
 
+  // ✅ CORREGIDO: Zona horaria Ecuador
   const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleDateString('es-EC', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Guayaquil'  // ✅ Hora de Ecuador
     });
   };
 
@@ -129,19 +130,25 @@ const AdminPage = () => {
     return tipos[tipo] || tipo;
   };
 
-  // 🔥 Función para proteger privacidad de emails
+  // ✅ NUEVO: Calcular edad desde fecha_nacimiento
+  const calcularEdad = (fechaNacimiento) => {
+    if (!fechaNacimiento) return 'N/A';
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+    return edad > 0 ? `${edad} años` : 'N/A';
+  };
+
+  // ✅ Proteger privacidad de emails
   const ofuscarEmail = (email) => {
-    if (!email || typeof email !== 'string') {
-      return 'N/A';
-    }
-
+    if (!email || typeof email !== 'string') return 'N/A';
     const partes = email.split('@');
-    if (partes.length !== 2) {
-      return email;
-    }
-
+    if (partes.length !== 2) return email;
     const [usuario, dominio] = partes;
-
     let usuarioOfuscado;
     if (usuario.length <= 3) {
       usuarioOfuscado = usuario.charAt(0) + '***';
@@ -150,18 +157,16 @@ const AdminPage = () => {
     } else {
       usuarioOfuscado = usuario.substring(0, 3) + '***';
     }
-
     return `${usuarioOfuscado}@${dominio}`;
   };
 
-  // 🔥 FUNCIÓN CORREGIDA: Calcular visitantes de hoy (sin problemas de timezone)
+  // ✅ Calcular visitantes de hoy con zona horaria Ecuador
   const calcularVisitantesHoy = (visitantes) => {
     if (!visitantes || visitantes.length === 0) {
       console.log('⚠️ No hay visitantes para calcular');
       return 0;
     }
 
-    // Obtener fecha de hoy (solo día/mes/año, sin hora)
     const ahora = new Date();
     const hoyDia = ahora.getDate();
     const hoyMes = ahora.getMonth();
@@ -192,11 +197,9 @@ const AdminPage = () => {
     });
 
     console.log(`🌟 RESULTADO: ${visitantesDeHoy.length} visitante(s) de hoy`);
-    
     return visitantesDeHoy.length;
   };
 
-  // 🔥 Obtener emoji según calificación
   const obtenerEmojiCalificacion = (calificacion) => {
     if (calificacion >= 4.5) return '🤩';
     if (calificacion >= 3.5) return '😊';
@@ -205,7 +208,6 @@ const AdminPage = () => {
     return '😡';
   };
 
-  // 🔥 Obtener color según porcentaje
   const obtenerColorPorcentaje = (porcentaje) => {
     if (porcentaje >= 80) return 'bg-green-500';
     if (porcentaje >= 60) return 'bg-blue-500';
@@ -293,7 +295,7 @@ const AdminPage = () => {
             <p className="text-sm text-gray-600">Itinerarios con IA</p>
           </div>
 
-          {/* 🔥 MODIFICADO: Satisfacción Promedio CON EVALUACIONES */}
+          {/* Satisfacción Promedio */}
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500">
             <div className="flex items-center justify-between mb-2">
               <span className="text-3xl">
@@ -319,7 +321,7 @@ const AdminPage = () => {
           </div>
         </div>
 
-        {/* 🔥 SECCIÓN: Estadísticas Detalladas de Evaluaciones */}
+        {/* Estadísticas Detalladas de Evaluaciones */}
         {estadisticasEvaluaciones && estadisticasEvaluaciones.total_evaluaciones > 0 && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -362,101 +364,29 @@ const AdminPage = () => {
               <div className="space-y-3">
                 <h3 className="font-semibold text-gray-900 mb-3">Respuestas Positivas</h3>
                 
-                {/* Personalización */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700">¿Fue personalizado?</span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {estadisticasEvaluaciones.porcentaje_personalizado.toFixed(1)}%
-                    </span>
+                {[
+                  { label: '¿Fue personalizado?', valor: estadisticasEvaluaciones.porcentaje_personalizado },
+                  { label: '¿Buenas decisiones de áreas?', valor: estadisticasEvaluaciones.porcentaje_buenas_decisiones },
+                  { label: '¿Guía inteligente?', valor: estadisticasEvaluaciones.porcentaje_acompaniamiento },
+                  { label: '¿Mejoró comprensión?', valor: estadisticasEvaluaciones.porcentaje_comprension },
+                  { label: '¿Contenido relevante?', valor: estadisticasEvaluaciones.porcentaje_relevante },
+                  { label: '¿Usaría nuevamente?', valor: estadisticasEvaluaciones.porcentaje_usaria_nuevamente },
+                ].map((item, idx) => (
+                  <div key={idx}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-gray-700">{item.label}</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {item.valor?.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(item.valor)}`}
+                        style={{ width: `${item.valor}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_personalizado)}`}
-                      style={{ width: `${estadisticasEvaluaciones.porcentaje_personalizado}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Buenas Decisiones */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700">¿Buenas decisiones de áreas?</span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {estadisticasEvaluaciones.porcentaje_buenas_decisiones.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_buenas_decisiones)}`}
-                      style={{ width: `${estadisticasEvaluaciones.porcentaje_buenas_decisiones}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Acompañamiento */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700">¿Guía inteligente?</span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {estadisticasEvaluaciones.porcentaje_acompaniamiento.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_acompaniamiento)}`}
-                      style={{ width: `${estadisticasEvaluaciones.porcentaje_acompaniamiento}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Comprensión */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700">¿Mejoró comprensión?</span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {estadisticasEvaluaciones.porcentaje_comprension.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_comprension)}`}
-                      style={{ width: `${estadisticasEvaluaciones.porcentaje_comprension}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Relevancia */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700">¿Contenido relevante?</span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {estadisticasEvaluaciones.porcentaje_relevante.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_relevante)}`}
-                      style={{ width: `${estadisticasEvaluaciones.porcentaje_relevante}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Usaría Nuevamente */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700">¿Usaría nuevamente?</span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {estadisticasEvaluaciones.porcentaje_usaria_nuevamente.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${obtenerColorPorcentaje(estadisticasEvaluaciones.porcentaje_usaria_nuevamente)}`}
-                      style={{ width: `${estadisticasEvaluaciones.porcentaje_usaria_nuevamente}%` }}
-                    />
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -503,7 +433,7 @@ const AdminPage = () => {
             )}
           </div>
 
-          {/* Estados de Itinerarios */}
+          {/* ✅ CORREGIDO: Solo 3 estados en Itinerarios */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span>📈</span>
@@ -511,39 +441,40 @@ const AdminPage = () => {
             </h2>
             {estadisticasItinerarios?.itinerarios_por_estado && Object.keys(estadisticasItinerarios.itinerarios_por_estado).length > 0 ? (
               <div className="space-y-4">
-                {Object.entries(estadisticasItinerarios.itinerarios_por_estado).map(([estado, cantidad]) => {
-                  const total = estadisticasItinerarios.total_itinerarios;
-                  const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : 0;
-                  
-                  const estadoConfig = {
-                    'generado': { color: 'from-blue-500 to-blue-600', emoji: '📝', label: 'Generados' },
-                    'activo': { color: 'from-green-500 to-green-600', emoji: '✅', label: 'Activos' },
-                    'completado': { color: 'from-purple-500 to-purple-600', emoji: '🎉', label: 'Completados' },
-                    'cancelado': { color: 'from-red-500 to-red-600', emoji: '❌', label: 'Cancelados' }
-                  };
-                  
-                  const config = estadoConfig[estado] || { color: 'from-gray-500 to-gray-600', emoji: '📋', label: estado };
-                  
-                  return (
-                    <div key={estado}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-gray-700 flex items-center gap-2">
-                          <span>{config.emoji}</span>
-                          {config.label}
-                        </span>
-                        <span className="text-sm text-gray-600">
-                          {cantidad} ({porcentaje}%)
-                        </span>
+                {Object.entries(estadisticasItinerarios.itinerarios_por_estado)
+                  .filter(([estado]) => ['generado', 'activo', 'completado'].includes(estado)) // ✅ Solo 3 estados
+                  .map(([estado, cantidad]) => {
+                    const total = estadisticasItinerarios.total_itinerarios;
+                    const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : 0;
+                    
+                    const estadoConfig = {
+                      'generado':   { color: 'from-blue-500 to-blue-600',   emoji: '📝', label: 'Generados'   },
+                      'activo':     { color: 'from-green-500 to-green-600', emoji: '✅', label: 'Activos'     },
+                      'completado': { color: 'from-purple-500 to-purple-600', emoji: '🎉', label: 'Completados' }
+                    };
+                    
+                    const config = estadoConfig[estado] || { color: 'from-gray-500 to-gray-600', emoji: '📋', label: estado };
+                    
+                    return (
+                      <div key={estado}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-700 flex items-center gap-2">
+                            <span>{config.emoji}</span>
+                            {config.label}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            {cantidad} ({porcentaje}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div
+                            className={`bg-gradient-to-r ${config.color} h-3 rounded-full transition-all duration-500`}
+                            style={{ width: `${porcentaje}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div
-                          className={`bg-gradient-to-r ${config.color} h-3 rounded-full transition-all duration-500`}
-                          style={{ width: `${porcentaje}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             ) : (
               <p className="text-gray-500 text-center py-8">
@@ -645,21 +576,11 @@ const AdminPage = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                      Nombre
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                      Email
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                      Tipo
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                      Edad
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                      Registro
-                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Nombre</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Email</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Tipo</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Edad</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Registro</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -687,9 +608,11 @@ const AdminPage = () => {
                           {formatearTipoVisitante(visitante.tipo_visitante)}
                         </span>
                       </td>
+                      {/* ✅ CORREGIDO: Edad calculada desde fecha_nacimiento */}
                       <td className="py-3 px-4 text-sm text-gray-600">
-                        {visitante.edad || 'N/A'}
+                        {calcularEdad(visitante.fecha_nacimiento)}
                       </td>
+                      {/* ✅ CORREGIDO: Fecha con zona horaria Ecuador */}
                       <td className="py-3 px-4 text-sm text-gray-600">
                         {formatearFecha(visitante.fecha_registro)}
                       </td>

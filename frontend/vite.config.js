@@ -3,13 +3,13 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({  // ✅ Agrega ({ mode })
   plugins: [
     react(),
-    VitePWA({
+    // ✅ PWA solo en producción, NO en desarrollo
+    mode === 'production' && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo192.png', 'logo512.png'],
-
       manifest: {
         name: 'Museo Pumapungo - Sistema de Itinerarios IA',
         short_name: 'Museo Pumapungo',
@@ -21,30 +21,10 @@ export default defineConfig({
         orientation: 'portrait',
         categories: ['education', 'travel', 'culture'],
         icons: [
-          {
-            src: '/logo192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: '/logo192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable'
-          },
-          {
-            src: '/logo512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: '/logo512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable'
-          }
+          { src: '/logo192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/logo192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/logo512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/logo512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ],
         shortcuts: [
           {
@@ -63,63 +43,42 @@ export default defineConfig({
           }
         ]
       },
-
-      // ⚡ Estrategia del Service Worker
       workbox: {
-        // Cachear assets estáticos (JS, CSS, imágenes, fuentes)
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
-
-        // Reglas para peticiones en runtime
         runtimeCaching: [
           {
-            // API de FastAPI — Network First (siempre intenta red primero)
             urlPattern: /^https?:\/\/.*\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 // 1 hora
-              },
+              expiration: { maxEntries: 50, maxAgeSeconds: 3600 },
               networkTimeoutSeconds: 10,
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
+              cacheableResponse: { statuses: [0, 200] }
             }
           },
           {
-            // Google Fonts u otros CDN
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 año
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] }
             }
           },
           {
-            // Imágenes externas
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'images-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 días
-              }
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 }
             }
           }
         ]
       }
     })
-  ],
+  ].filter(Boolean),  // ✅ Filtra los falsos (cuando PWA está desactivado)
 
   server: {
     port: 5173
   }
-})
+}))
