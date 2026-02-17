@@ -1,7 +1,4 @@
-# services/google_auth_service.py
-# Servicio de autenticación con Google y extracción de datos
-# Sistema Museo Pumapungo
-
+# services/google_auth_service.py 
 import logging
 from typing import Dict, List, Optional
 from urllib.parse import urlencode
@@ -17,11 +14,7 @@ logger = logging.getLogger(__name__)
 
 class GoogleAuthService:
     """
-    Servicio para autenticación OAuth con Google y extracción de datos:
-    - Perfil básico (nombre, email)
-    - Subscripciones de YouTube
-    - Lugares guardados en Google Maps
-    - Historial de búsquedas (si autoriza)
+    Servicio para autenticación OAuth con Google y extracción de datos
     """
     
     def __init__(self):
@@ -29,7 +22,6 @@ class GoogleAuthService:
         self.client_secret = settings.GOOGLE_CLIENT_SECRET
         self.redirect_uri = settings.GOOGLE_REDIRECT_URI
         
-        # Scopes que solicitaremos
         self.scopes = [
             'openid',
             'https://www.googleapis.com/auth/userinfo.email',
@@ -37,17 +29,8 @@ class GoogleAuthService:
             'https://www.googleapis.com/auth/youtube.readonly',
         ]
     
-    # ============================================
-    # AUTENTICACIÓN OAUTH
-    # ============================================
-    
     def get_authorization_url(self, state: str = "random_state") -> str:
-        """
-        Genera URL de autorización de Google OAuth
-        
-        Returns:
-            URL completa para redirigir al usuario
-        """
+        """Genera URL de autorización de Google OAuth"""
         params = {
             'client_id': self.client_id,
             'redirect_uri': self.redirect_uri,
@@ -65,15 +48,7 @@ class GoogleAuthService:
         return auth_url
     
     async def exchange_code_for_token(self, code: str) -> Dict:
-        """
-        Intercambia código de autorización por access token
-        
-        Args:
-            code: Código recibido del callback
-            
-        Returns:
-            dict con access_token, refresh_token, expires_in
-        """
+        """Intercambia código de autorización por access token"""
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -104,17 +79,8 @@ class GoogleAuthService:
             logger.error(f"❌ Error intercambiando código: {e}")
             raise
     
-    # ============================================
-    # EXTRACCIÓN DE DATOS DE PERFIL
-    # ============================================
-    
     async def get_user_profile(self, access_token: str) -> Dict:
-        """
-        Obtiene información básica del perfil de Google
-        
-        Returns:
-            dict con id, email, name, picture
-        """
+        """Obtiene información básica del perfil de Google"""
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -142,26 +108,14 @@ class GoogleAuthService:
             logger.error(f"❌ Error obteniendo perfil: {e}")
             raise
     
-    # ============================================
-    # EXTRACCIÓN DE YOUTUBE
-    # ============================================
-    
     async def get_youtube_subscriptions(self, access_token: str) -> Dict:
         """
         Obtiene las subscripciones de YouTube del usuario
-        Esto nos da pistas sobre sus intereses
-        
-        Returns:
-            dict con subscriptions, channels, categorias_detectadas
         """
         try:
-            # Crear credenciales
             credentials = Credentials(token=access_token)
-            
-            # Construir servicio de YouTube
             youtube = build('youtube', 'v3', credentials=credentials)
             
-            # Obtener subscripciones
             request = youtube.subscriptions().list(
                 part='snippet',
                 mine=True,
@@ -185,10 +139,13 @@ class GoogleAuthService:
                 
                 channels.append(channel_title)
             
-            # Detectar categorías basadas en palabras clave
-            categorias = self._detectar_categorias_youtube(channels)
+            # LOG IMPORTANTE: Ver qué canales está detectando
+            logger.info(f"📺 Canales de YouTube detectados: {channels[:10]}...")  # Primeros 10
             
-            logger.info(f"✅ YouTube: {len(subscriptions)} subscripciones obtenidas")
+            # Detectar categorías con el nuevo sistema mejorado
+            categorias = self._detectar_categorias_youtube_mejorado(channels)
+            
+            logger.info(f"✅ YouTube: {len(subscriptions)} subscripciones → Categorías: {categorias}")
             
             return {
                 'subscriptions': subscriptions,
@@ -199,7 +156,6 @@ class GoogleAuthService:
             
         except Exception as e:
             logger.error(f"❌ Error obteniendo subscripciones de YouTube: {e}")
-            # Retornar vacío en lugar de fallar
             return {
                 'subscriptions': [],
                 'channels': [],
@@ -207,21 +163,124 @@ class GoogleAuthService:
                 'categorias_detectadas': []
             }
     
-    def _detectar_categorias_youtube(self, channels: List[str]) -> List[str]:
+    def _detectar_categorias_youtube_mejorado(self, channels: List[str]) -> List[str]:
         """
-        Detecta categorías de interés basadas en nombres de canales
+        Sistema mejorado de detección de categorías con MUCHAS más palabras clave
         """
-        categorias_detectadas = set()
+        categorias_detectadas = {}  
         
-        # Mapeo de palabras clave a categorías del museo
         keywords_map = {
-            'arqueologia': ['arqueolog', 'ancient', 'civilization', 'ruins', 'pyramid'],
-            'historia': ['history', 'historia', 'historical', 'historic'],
-            'arte': ['art', 'arte', 'museum', 'museo', 'gallery', 'painting'],
-            'naturaleza': ['nature', 'naturaleza', 'wildlife', 'animal', 'planet'],
-            'biodiversidad': ['biodiversity', 'especies', 'conservation', 'aves', 'birds'],
-            'cultura_andina': ['andean', 'andino', 'inca', 'quechua', 'indigenous'],
-            'ciencia': ['science', 'ciencia', 'discovery', 'documentary'],
+            # ARQUEOLOGÍA (relacionado con Museo Pumapungo)
+            'arqueologia': [
+                'arqueolog', 'archaeolog', 'ancient', 'ruins', 'pyramid', 'tomb',
+                'excavation', 'artifact', 'mesopotamia', 'egypt', 'maya', 'aztec',
+                'civilization', 'ancestral', 'prehistoric', 'paleontology',
+                'fossil', 'excavaciones', 'ruinas', 'civilizacion', 'antiguedad'
+            ],
+            
+            # HISTORIA
+            'historia': [
+                'history', 'historia', 'historical', 'historic', 'war', 'guerra',
+                'revolution', 'revolucion', 'timeline', 'biography', 'biografia',
+                'documentar', 'chronicle', 'cronica', 'period', 'epoch', 'era',
+                'medieval', 'renaissance', 'victorian', 'empire', 'imperio'
+            ],
+            
+            # ARTE (importante para museo)
+            'arte': [
+                'art', 'arte', 'museum', 'museo', 'gallery', 'galeria', 'painting',
+                'pintura', 'sculpture', 'escultura', 'artist', 'artista', 'canvas',
+                'masterpiece', 'obra', 'exhibition', 'exposicion', 'design',
+                'creative', 'draw', 'dibujo', 'illustration', 'ilustracion',
+                'contemporary', 'modern', 'abstract', 'portrait', 'retrato'
+            ],
+            
+            # NATURALEZA Y BIODIVERSIDAD (Pumapungo tiene jardín etnobotánico)
+            'naturaleza': [
+                'nature', 'naturaleza', 'wildlife', 'animal', 'planet', 'planeta',
+                'earth', 'tierra', 'ocean', 'oceano', 'forest', 'bosque', 'jungle',
+                'safari', 'outdoor', 'landscape', 'paisaje', 'environment', 'ambiente',
+                'ecology', 'ecologia', 'wild', 'salvaje', 'mountain', 'montaña'
+            ],
+            
+            'biodiversidad': [
+                'biodiversity', 'biodiversidad', 'species', 'especies', 'conservation',
+                'conservacion', 'aves', 'birds', 'parrot', 'loro', 'guacamaya',
+                'condor', 'flora', 'fauna', 'endemic', 'endemico', 'botanical',
+                'botanico', 'plants', 'plantas', 'orchid', 'orquidea'
+            ],
+            
+            # CULTURA ANDINA (MUY importante para Pumapungo)
+            'cultura_andina': [
+                'andean', 'andino', 'inca', 'inkas', 'quechua', 'kichwa',
+                'indigenous', 'indigena', 'native', 'nativo', 'tribal', 'tribe',
+                'cañari', 'cañar', 'cuenca', 'ecuador', 'peru', 'bolivia',
+                'altiplano', 'highlands', 'sierra', 'shamanic', 'chamanico',
+                'ritual', 'ceremony', 'ceremonia', 'traditional', 'tradicional'
+            ],
+            
+            # CIENCIA Y EDUCACIÓN
+            'ciencia': [
+                'science', 'ciencia', 'discovery', 'descubrimiento', 'research',
+                'investigacion', 'experiment', 'experimento', 'physics', 'fisica',
+                'chemistry', 'quimica', 'biology', 'biologia', 'astronomy',
+                'astronomia', 'cosmos', 'space', 'espacio', 'nasa', 'lab',
+                'laboratorio', 'scientist', 'cientifico', 'theory', 'teoria'
+            ],
+            
+            # GEOGRAFÍA Y VIAJES (interesante para visitantes)
+            'geografia': [
+                'geography', 'geografia', 'travel', 'viaje', 'tourism', 'turismo',
+                'world', 'mundo', 'country', 'pais', 'city', 'ciudad', 'explore',
+                'explorar', 'adventure', 'aventura', 'journey', 'trip', 'destination',
+                'destino', 'culture', 'cultural', 'atlas', 'map', 'mapa'
+            ],
+            
+            # ANTROPOLOGÍA Y ETNOGRAFÍA (Pumapungo tiene sala etnográfica)
+            'antropologia': [
+                'anthropology', 'antropologia', 'ethnography', 'etnografia',
+                'cultural', 'folklore', 'tradition', 'tradicion', 'customs',
+                'costumbres', 'heritage', 'patrimonio', 'identity', 'identidad',
+                'community', 'comunidad', 'society', 'sociedad', 'ethnic', 'etnico'
+            ],
+            
+            # MÚSICA Y DANZA (cultura)
+            'musica': [
+                'music', 'musica', 'song', 'cancion', 'dance', 'danza', 'baile',
+                'instrument', 'instrumento', 'folk', 'folklorico', 'traditional music',
+                'andean music', 'musica andina', 'quena', 'charango', 'zampoña'
+            ],
+            
+            # TECNOLOGÍA (para distinguir de otros intereses)
+            'tecnologia': [
+                'tech', 'technology', 'tecnologia', 'gadget', 'computer', 'computadora',
+                'software', 'programming', 'programacion', 'code', 'codigo', 'gaming',
+                'videogame', 'videojuego', 'console', 'pc', 'smartphone', 'app',
+                'digital', 'cyber', 'robot', 'ai', 'inteligencia artificial'
+            ],
+            
+            # COCINA Y GASTRONOMÍA
+            'gastronomia': [
+                'food', 'comida', 'cooking', 'cocina', 'recipe', 'receta', 'chef',
+                'restaurant', 'restaurante', 'cuisine', 'culinary', 'culinario',
+                'gastronomy', 'gastronomia', 'dish', 'plato', 'traditional food'
+            ],
+            
+            # ENTRETENIMIENTO GENERAL (para descartar)
+            'entretenimiento': [
+                'entertainment', 'entretenimiento', 'comedy', 'comedia', 'funny',
+                'gracioso', 'laugh', 'risa', 'prank', 'broma', 'challenge', 'reto',
+                'vlog', 'lifestyle', 'estilo de vida', 'celebrity', 'celebridad',
+                'gossip', 'chisme', 'trend', 'tendencia', 'viral'
+            ],
+            
+            # DEPORTES (para descartar, no relacionado con museo)
+            'deportes': [
+                'sport', 'deporte', 'football', 'futbol', 'soccer', 'basketball',
+                'tennis', 'tenis', 'athletic', 'atletismo', 'fitness', 'gym',
+                'exercise', 'ejercicio', 'workout', 'training', 'entrenamiento',
+                'champion', 'campeon', 'league', 'liga', 'team', 'equipo'
+            ]
         }
         
         # Buscar palabras clave en nombres de canales
@@ -229,21 +288,41 @@ class GoogleAuthService:
             channel_lower = channel.lower()
             
             for categoria, keywords in keywords_map.items():
-                if any(keyword in channel_lower for keyword in keywords):
-                    categorias_detectadas.add(categoria)
+                coincidencias = sum(1 for keyword in keywords if keyword in channel_lower)
+                
+                if coincidencias > 0:
+                    # Contar cuántas veces aparece cada categoría
+                    if categoria not in categorias_detectadas:
+                        categorias_detectadas[categoria] = 0
+                    categorias_detectadas[categoria] += coincidencias
+                    
+                    # LOG detallado para debugging
+                    logger.debug(f"🎯 Canal '{channel}' → {categoria} ({coincidencias} coincidencias)")
         
-        return list(categorias_detectadas)
-    
-    # ============================================
-    # ANÁLISIS COMPLETO
-    # ============================================
+        # Ordenar categorías por frecuencia y retornar las más relevantes
+        categorias_ordenadas = sorted(
+            categorias_detectadas.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+        
+        # Filtrar: solo categorías relacionadas con el museo (excluir deportes, entretenimiento, tecnología)
+        categorias_museo = [
+            cat for cat, _ in categorias_ordenadas 
+            if cat not in ['deportes', 'entretenimiento', 'tecnologia', 'gastronomia']
+        ]
+        
+        # Si no se detectó nada relevante, usar cultura como fallback
+        if not categorias_museo:
+            logger.warning("⚠️ No se detectaron categorías específicas, usando fallback: cultura")
+            return ['cultura']
+        
+        # Retornar hasta 5 categorías principales
+        return categorias_museo[:5]
     
     async def extract_user_interests(self, access_token: str) -> Dict:
         """
         Extrae todos los datos relevantes del usuario de Google
-        
-        Returns:
-            dict con profile, youtube_data, y resumen de intereses
         """
         try:
             # 1. Perfil básico
@@ -255,7 +334,7 @@ class GoogleAuthService:
             # 3. Construir resumen
             intereses_detectados = youtube_data['categorias_detectadas']
             
-            logger.info(f"✅ Extracción completa: {len(intereses_detectados)} categorías detectadas")
+            logger.info(f"✅ Extracción completa: {len(intereses_detectados)} categorías detectadas → {intereses_detectados}")
             
             return {
                 'profile': profile,
@@ -276,7 +355,6 @@ class GoogleAuthService:
         subscriptions = youtube_data.get('total_subscriptions', 0)
         categorias = len(youtube_data.get('categorias_detectadas', []))
         
-        # Fórmula simple de confianza
         confianza = 0
         
         if subscriptions > 0:
@@ -285,7 +363,6 @@ class GoogleAuthService:
         if categorias > 0:
             confianza += min(30, categorias * 10)  # Máximo 30 puntos
         
-        # Base mínima de 20 si hay algún dato
         if subscriptions > 0 or categorias > 0:
             confianza = max(20, confianza)
         
