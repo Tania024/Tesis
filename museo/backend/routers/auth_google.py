@@ -1,6 +1,4 @@
 # backend/routers/auth_google.py
-# Endpoints de autenticación con Google OAuth
-# Sistema Museo Pumapungo
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
@@ -40,7 +38,7 @@ async def google_callback(
 ):
     """
     Callback de Google OAuth
-    ✅ CORREGIDO: Elimina duplicación, agrega datos_completos, limpia URL
+    ✅ CORREGIDO: Usa codigos_areas_detectadas del nuevo servicio
     """
 
     if error:
@@ -65,7 +63,10 @@ async def google_callback(
 
         profile = user_data["profile"]
         youtube_data = user_data["youtube"]
-        intereses_detectados_basicos = user_data["intereses_detectados"]
+        
+        # ✅ CAMBIO: usar las nuevas claves
+        codigos_areas_detectadas = user_data["codigos_areas_detectadas"]  
+        nombres_areas_detectadas = user_data["nombres_areas_detectadas"]  
 
         email = profile["email"]
         name = profile["name"]
@@ -74,6 +75,7 @@ async def google_callback(
 
         logger.info(f"📊 Usuario Google: {email}")
         logger.info(f"📺 Canales YouTube: {len(youtube_data['channels'])}")
+        logger.info(f"🎯 Áreas detectadas: {codigos_areas_detectadas}")
 
         # 3. Buscar o crear visitante (POR EMAIL)
         visitante = db.query(Visitante).filter(Visitante.email == email).first()
@@ -97,7 +99,27 @@ async def google_callback(
             visitante.tipo_visitante is not None,
         ])
 
-        # 4. Analizar intereses con IA
+        # 4. ✅ CONVERTIR códigos de área a categorías simples para el analyzer
+        # Mapeo: códigos BD → categorías genéricas para IA
+        categorias_para_ia = []
+        for codigo in codigos_areas_detectadas:
+            if codigo.startswith('ARQ') or codigo.startswith('RUIN'):
+                categorias_para_ia.append('arqueologia')
+            elif codigo.startswith('ART'):
+                categorias_para_ia.append('arte')
+            elif codigo.startswith('ETN'):
+                categorias_para_ia.append('etnografia')
+            elif codigo.startswith('AVE'):
+                categorias_para_ia.append('aves')
+            elif codigo.startswith('BOT'):
+                categorias_para_ia.append('plantas')
+            elif codigo.startswith('TEMP'):
+                categorias_para_ia.append('temporal')
+        
+        # Remover duplicados
+        categorias_para_ia = list(set(categorias_para_ia))
+
+        # 5. Analizar intereses con IA (opcional, ya tenemos los códigos de área)
         datos_para_ia = {
             "pages_liked": [
                 {"name": channel, "category": "YouTube"}
@@ -113,13 +135,15 @@ async def google_callback(
             nombre_visitante=visitante.nombre
         )
 
+        # Combinar categorías detectadas + análisis IA
         intereses_finales = list(set(
-            intereses_detectados_basicos + analisis_ia["intereses"]
+            categorias_para_ia + analisis_ia["intereses"]
         ))
 
-        logger.info(f"✅ Intereses detectados: {', '.join(intereses_finales)}")
+        logger.info(f"✅ Intereses detectados (categorías): {', '.join(intereses_finales)}")
+        logger.info(f"✅ Áreas del museo (códigos): {', '.join(codigos_areas_detectadas)}")
 
-        # 5. Crear o actualizar perfil
+        # 6. Crear o actualizar perfil
         perfil = db.query(Perfil).filter(
             Perfil.visitante_id == visitante.id
         ).first()
@@ -129,7 +153,7 @@ async def google_callback(
         if not perfil:
             perfil = Perfil(
                 visitante_id=visitante.id,
-                intereses=intereses_finales,
+                intereses=intereses_finales,  # Categorías genéricas
                 tiempo_disponible=tiempo_usuario,
                 nivel_detalle=analisis_ia.get("nivel_detalle_sugerido", "medio"),
                 incluir_descansos=True
@@ -148,9 +172,9 @@ async def google_callback(
 
         logger.info(f"✅ Autenticación Google completada: Visitante ID={visitante.id}")
 
-        # 6. ✅ REDIRIGIR AL FRONTEND con los datos
+        # 7. ✅ REDIRIGIR AL FRONTEND con los datos
         settings = get_settings()
-        frontend_url = (settings.FRONTEND_URL or "http://localhost:5173").rstrip('/')  # ✅ QUITAR BARRA FINAL
+        frontend_url = (settings.FRONTEND_URL or "http://localhost:5173").rstrip('/')
         
         # Preparar parámetros para el frontend
         params = {
@@ -158,7 +182,10 @@ async def google_callback(
             "nombre": f"{visitante.nombre} {visitante.apellido}".strip(),
             "email": visitante.email,
             "success": "true",
-            "datos_completos": "true" if datos_completos else "false"
+            "datos_completos": "true" if datos_completos else "false",
+            # ✅ NUEVO: enviar las áreas detectadas al frontend
+            "areas_codigos": ",".join(codigos_areas_detectadas),  # "ARQ-01,AVE-01,BOT-01"
+            "areas_nombres": ",".join(nombres_areas_detectadas),  # "Sala Arqueológica,Aviario,Jardín"
         }
         
         redirect_url = f"{frontend_url}/login?{urlencode(params)}"
