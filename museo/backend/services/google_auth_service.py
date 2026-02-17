@@ -1,4 +1,5 @@
-# services/google_auth_service.py 
+# services/google_auth_service.py
+
 import logging
 from typing import Dict, List, Optional
 from urllib.parse import urlencode
@@ -15,7 +16,19 @@ logger = logging.getLogger(__name__)
 class GoogleAuthService:
     """
     Servicio para autenticación OAuth con Google y extracción de datos
+    Mapea intereses a los códigos exactos de áreas del museo en BD
     """
+    
+    # 🏛️ ÁREAS DEL MUSEO (deben coincidir EXACTAMENTE con la BD)
+    AREAS_MUSEO = {
+        "ARQ-01": "Sala Arqueológica Cañari",
+        "ETN-01": "Sala Etnográfica",
+        "AVE-01": "Aviario de Aves Andinas",
+        "BOT-01": "Jardín Botánico",
+        "ART-01": "Sala de Arte Colonial",
+        "RUIN-01": "Parque Arqueológico Pumapungo",
+        "TEMP-01": "Exhibición Temporal"
+    }
     
     def __init__(self):
         self.client_id = settings.GOOGLE_CLIENT_ID
@@ -109,9 +122,7 @@ class GoogleAuthService:
             raise
     
     async def get_youtube_subscriptions(self, access_token: str) -> Dict:
-        """
-        Obtiene las subscripciones de YouTube del usuario
-        """
+        """Obtiene las subscripciones de YouTube del usuario"""
         try:
             credentials = Credentials(token=access_token)
             youtube = build('youtube', 'v3', credentials=credentials)
@@ -139,19 +150,18 @@ class GoogleAuthService:
                 
                 channels.append(channel_title)
             
-            # LOG IMPORTANTE: Ver qué canales está detectando
-            logger.info(f"📺 Canales de YouTube detectados: {channels[:10]}...")  # Primeros 10
+            logger.info(f"📺 YouTube: {len(channels)} canales detectados")
             
-            # Detectar categorías con el nuevo sistema mejorado
-            categorias = self._detectar_categorias_youtube_mejorado(channels)
+            # Detectar códigos de áreas del museo basadas en los canales
+            codigos_areas = self._mapear_canales_a_codigos_areas(channels)
             
-            logger.info(f"✅ YouTube: {len(subscriptions)} subscripciones → Categorías: {categorias}")
+            logger.info(f"✅ Áreas detectadas: {codigos_areas}")
             
             return {
                 'subscriptions': subscriptions,
                 'channels': channels,
                 'total_subscriptions': len(subscriptions),
-                'categorias_detectadas': categorias
+                'codigos_areas_detectadas': codigos_areas  # Retorna códigos BD
             }
             
         except Exception as e:
@@ -160,165 +170,135 @@ class GoogleAuthService:
                 'subscriptions': [],
                 'channels': [],
                 'total_subscriptions': 0,
-                'categorias_detectadas': []
+                'codigos_areas_detectadas': []
             }
     
-    def _detectar_categorias_youtube_mejorado(self, channels: List[str]) -> List[str]:
+    def _mapear_canales_a_codigos_areas(self, channels: List[str]) -> List[str]:
         """
-        Sistema mejorado de detección de categorías con MUCHAS más palabras clave
+        🎯 Mapea canales de YouTube a códigos de áreas del museo (BD)
+        Retorna: Lista de códigos como ["ARQ-01", "AVE-01", "BOT-01"]
         """
-        categorias_detectadas = {}  
+        areas_scores = {
+            'ARQ-01': 0,   # Arqueológica Cañari
+            'RUIN-01': 0,  # Parque Arqueológico
+            'ART-01': 0,   # Arte Colonial
+            'ETN-01': 0,   # Etnográfica
+            'AVE-01': 0,   # Aves Andinas
+            'BOT-01': 0,   # Jardín Botánico
+            'TEMP-01': 0   # Temporal
+        }
         
-        keywords_map = {
-            # ARQUEOLOGÍA (relacionado con Museo Pumapungo)
-            'arqueologia': [
-                'arqueolog', 'archaeolog', 'ancient', 'ruins', 'pyramid', 'tomb',
-                'excavation', 'artifact', 'mesopotamia', 'egypt', 'maya', 'aztec',
-                'civilization', 'ancestral', 'prehistoric', 'paleontology',
-                'fossil', 'excavaciones', 'ruinas', 'civilizacion', 'antiguedad'
+        # 🔥 KEYWORDS MAPEADAS A CÓDIGOS DE ÁREAS
+        keywords_por_codigo = {
+            # ARQUEOLOGÍA CAÑARI (ARQ-01)
+            'ARQ-01': [
+                'arqueolog', 'archaeolog', 'ancient', 'ruins', 'ruinas', 'excavation',
+                'artifact', 'artefacto', 'civilization', 'civilizacion', 'prehistoric',
+                'cañari', 'canari', 'inca', 'precolombino', 'precolumbian',
+                'tomb', 'tumba', 'ceramic', 'ceramica', 'pottery', 'antiquity',
+                'antiguedad', 'heritage', 'patrimonio', 'relic', 'reliquia',
+                'maya', 'aztec', 'mesopotamia', 'egypt', 'egipto'
             ],
             
-            # HISTORIA
-            'historia': [
-                'history', 'historia', 'historical', 'historic', 'war', 'guerra',
-                'revolution', 'revolucion', 'timeline', 'biography', 'biografia',
-                'documentar', 'chronicle', 'cronica', 'period', 'epoch', 'era',
-                'medieval', 'renaissance', 'victorian', 'empire', 'imperio'
+            # PARQUE ARQUEOLÓGICO (RUIN-01)
+            'RUIN-01': [
+                'ruins', 'ruinas', 'archaeological park', 'parque arqueologico',
+                'outdoor', 'exterior', 'open air', 'aire libre', 'monument',
+                'monumento', 'site', 'sitio', 'excavation', 'excavaciones',
+                'stone', 'piedra', 'wall', 'muro', 'structure', 'estructura'
             ],
             
-            # ARTE (importante para museo)
-            'arte': [
-                'art', 'arte', 'museum', 'museo', 'gallery', 'galeria', 'painting',
-                'pintura', 'sculpture', 'escultura', 'artist', 'artista', 'canvas',
-                'masterpiece', 'obra', 'exhibition', 'exposicion', 'design',
-                'creative', 'draw', 'dibujo', 'illustration', 'ilustracion',
-                'contemporary', 'modern', 'abstract', 'portrait', 'retrato'
+            # ARTE COLONIAL (ART-01)
+            'ART-01': [
+                'art', 'arte', 'painting', 'pintura', 'painter', 'pintor',
+                'sculpture', 'escultura', 'artist', 'artista', 'gallery', 'galeria',
+                'museum', 'museo', 'exhibition', 'exposicion', 'masterpiece',
+                'portrait', 'retrato', 'baroque', 'barroco', 'colonial',
+                'virreinal', 'religious art', 'arte religioso', 'iconography',
+                'mural', 'fresco', 'renaissance', 'renacimiento', 'drawing',
+                'illustration', 'design', 'contemporary', 'modern'
             ],
             
-            # NATURALEZA Y BIODIVERSIDAD (Pumapungo tiene jardín etnobotánico)
-            'naturaleza': [
-                'nature', 'naturaleza', 'wildlife', 'animal', 'planet', 'planeta',
-                'earth', 'tierra', 'ocean', 'oceano', 'forest', 'bosque', 'jungle',
-                'safari', 'outdoor', 'landscape', 'paisaje', 'environment', 'ambiente',
-                'ecology', 'ecologia', 'wild', 'salvaje', 'mountain', 'montaña'
+            # ETNOGRAFÍA (ETN-01)
+            'ETN-01': [
+                'ethnography', 'etnografia', 'indigenous', 'indigena', 'tribe',
+                'tribal', 'native', 'nativo', 'cultural', 'cultura', 'folklore',
+                'tradition', 'tradicion', 'customs', 'costumbres', 'ritual',
+                'ceremony', 'ceremonia', 'shamanic', 'chamanico', 'andean',
+                'andino', 'quechua', 'kichwa', 'highland', 'sierra',
+                'community', 'comunidad', 'anthropology', 'antropologia',
+                'textile', 'textil', 'craft', 'artesania', 'weaving', 'tejido',
+                'pottery', 'ceramica', 'mask', 'mascara', 'ethnic', 'etnico'
             ],
             
-            'biodiversidad': [
-                'biodiversity', 'biodiversidad', 'species', 'especies', 'conservation',
-                'conservacion', 'aves', 'birds', 'parrot', 'loro', 'guacamaya',
-                'condor', 'flora', 'fauna', 'endemic', 'endemico', 'botanical',
-                'botanico', 'plants', 'plantas', 'orchid', 'orquidea'
+            # AVES ANDINAS (AVE-01)
+            'AVE-01': [
+                'bird', 'birds', 'ave', 'aves', 'parrot', 'loro', 'macaw',
+                'guacamaya', 'condor', 'eagle', 'aguila', 'hawk', 'halcon',
+                'hummingbird', 'colibri', 'toucan', 'tucan', 'flamingo',
+                'owl', 'buho', 'penguin', 'pinguino', 'birdwatching',
+                'ornithology', 'ornitologia', 'feather', 'pluma', 'nest',
+                'flight', 'vuelo', 'wing', 'ala', 'aviary', 'aviario',
+                'wildlife', 'fauna', 'rescue', 'rescate', 'endemic',
+                'tropical birds', 'aves tropicales', 'andean birds'
             ],
             
-            # CULTURA ANDINA (MUY importante para Pumapungo)
-            'cultura_andina': [
-                'andean', 'andino', 'inca', 'inkas', 'quechua', 'kichwa',
-                'indigenous', 'indigena', 'native', 'nativo', 'tribal', 'tribe',
-                'cañari', 'cañar', 'cuenca', 'ecuador', 'peru', 'bolivia',
-                'altiplano', 'highlands', 'sierra', 'shamanic', 'chamanico',
-                'ritual', 'ceremony', 'ceremonia', 'traditional', 'tradicional'
+            # JARDÍN BOTÁNICO (BOT-01)
+            'BOT-01': [
+                'plant', 'plants', 'planta', 'plantas', 'botanical', 'botanico',
+                'garden', 'jardin', 'flower', 'flor', 'tree', 'arbol', 'forest',
+                'flora', 'orchid', 'orquidea', 'medicinal', 'herb', 'hierba',
+                'biodiversity', 'biodiversidad', 'species', 'especies',
+                'ecosystem', 'native', 'nativo', 'endemic', 'conservation',
+                'botany', 'botanica', 'vegetation', 'vegetacion', 'leaf',
+                'seed', 'semilla', 'ecology', 'ecologia', 'green', 'verde',
+                'nature', 'naturaleza', 'environment', 'ambiente'
             ],
             
-            # CIENCIA Y EDUCACIÓN
-            'ciencia': [
-                'science', 'ciencia', 'discovery', 'descubrimiento', 'research',
-                'investigacion', 'experiment', 'experimento', 'physics', 'fisica',
-                'chemistry', 'quimica', 'biology', 'biologia', 'astronomy',
-                'astronomia', 'cosmos', 'space', 'espacio', 'nasa', 'lab',
-                'laboratorio', 'scientist', 'cientifico', 'theory', 'teoria'
-            ],
-            
-            # GEOGRAFÍA Y VIAJES (interesante para visitantes)
-            'geografia': [
-                'geography', 'geografia', 'travel', 'viaje', 'tourism', 'turismo',
-                'world', 'mundo', 'country', 'pais', 'city', 'ciudad', 'explore',
-                'explorar', 'adventure', 'aventura', 'journey', 'trip', 'destination',
-                'destino', 'culture', 'cultural', 'atlas', 'map', 'mapa'
-            ],
-            
-            # ANTROPOLOGÍA Y ETNOGRAFÍA (Pumapungo tiene sala etnográfica)
-            'antropologia': [
-                'anthropology', 'antropologia', 'ethnography', 'etnografia',
-                'cultural', 'folklore', 'tradition', 'tradicion', 'customs',
-                'costumbres', 'heritage', 'patrimonio', 'identity', 'identidad',
-                'community', 'comunidad', 'society', 'sociedad', 'ethnic', 'etnico'
-            ],
-            
-            # MÚSICA Y DANZA (cultura)
-            'musica': [
-                'music', 'musica', 'song', 'cancion', 'dance', 'danza', 'baile',
-                'instrument', 'instrumento', 'folk', 'folklorico', 'traditional music',
-                'andean music', 'musica andina', 'quena', 'charango', 'zampoña'
-            ],
-            
-            # TECNOLOGÍA (para distinguir de otros intereses)
-            'tecnologia': [
-                'tech', 'technology', 'tecnologia', 'gadget', 'computer', 'computadora',
-                'software', 'programming', 'programacion', 'code', 'codigo', 'gaming',
-                'videogame', 'videojuego', 'console', 'pc', 'smartphone', 'app',
-                'digital', 'cyber', 'robot', 'ai', 'inteligencia artificial'
-            ],
-            
-            # COCINA Y GASTRONOMÍA
-            'gastronomia': [
-                'food', 'comida', 'cooking', 'cocina', 'recipe', 'receta', 'chef',
-                'restaurant', 'restaurante', 'cuisine', 'culinary', 'culinario',
-                'gastronomy', 'gastronomia', 'dish', 'plato', 'traditional food'
-            ],
-            
-            # ENTRETENIMIENTO GENERAL (para descartar)
-            'entretenimiento': [
-                'entertainment', 'entretenimiento', 'comedy', 'comedia', 'funny',
-                'gracioso', 'laugh', 'risa', 'prank', 'broma', 'challenge', 'reto',
-                'vlog', 'lifestyle', 'estilo de vida', 'celebrity', 'celebridad',
-                'gossip', 'chisme', 'trend', 'tendencia', 'viral'
-            ],
-            
-            # DEPORTES (para descartar, no relacionado con museo)
-            'deportes': [
-                'sport', 'deporte', 'football', 'futbol', 'soccer', 'basketball',
-                'tennis', 'tenis', 'athletic', 'atletismo', 'fitness', 'gym',
-                'exercise', 'ejercicio', 'workout', 'training', 'entrenamiento',
-                'champion', 'campeon', 'league', 'liga', 'team', 'equipo'
+            # EXHIBICIÓN TEMPORAL (TEMP-01) - menos específico
+            'TEMP-01': [
+                'exhibition', 'exposicion', 'temporary', 'temporal', 'special',
+                'contemporary', 'modern', 'innovation', 'trending', 'current',
+                'new', 'latest', 'reciente', 'show', 'display'
             ]
         }
         
-        # Buscar palabras clave en nombres de canales
+        # Analizar cada canal
         for channel in channels:
             channel_lower = channel.lower()
             
-            for categoria, keywords in keywords_map.items():
+            for codigo, keywords in keywords_por_codigo.items():
+                # Contar coincidencias
                 coincidencias = sum(1 for keyword in keywords if keyword in channel_lower)
                 
                 if coincidencias > 0:
-                    # Contar cuántas veces aparece cada categoría
-                    if categoria not in categorias_detectadas:
-                        categorias_detectadas[categoria] = 0
-                    categorias_detectadas[categoria] += coincidencias
-                    
-                    # LOG detallado para debugging
-                    logger.debug(f"🎯 Canal '{channel}' → {categoria} ({coincidencias} coincidencias)")
+                    areas_scores[codigo] += coincidencias
+                    logger.debug(f"🎯 '{channel}' → {codigo} ({self.AREAS_MUSEO[codigo]}) +{coincidencias}")
         
-        # Ordenar categorías por frecuencia y retornar las más relevantes
-        categorias_ordenadas = sorted(
-            categorias_detectadas.items(),
+        # Ordenar áreas por score
+        areas_ordenadas = sorted(
+            areas_scores.items(),
             key=lambda x: x[1],
             reverse=True
         )
         
-        # Filtrar: solo categorías relacionadas con el museo (excluir deportes, entretenimiento, tecnología)
-        categorias_museo = [
-            cat for cat, _ in categorias_ordenadas 
-            if cat not in ['deportes', 'entretenimiento', 'tecnologia', 'gastronomia']
-        ]
+        # Filtrar solo áreas con score > 0
+        codigos_con_interes = [codigo for codigo, score in areas_ordenadas if score > 0]
         
-        # Si no se detectó nada relevante, usar cultura como fallback
-        if not categorias_museo:
-            logger.warning("⚠️ No se detectaron categorías específicas, usando fallback: cultura")
-            return ['cultura']
+        # Log detallado de scores con nombres de áreas
+        scores_con_nombres = {
+            f"{codigo} ({self.AREAS_MUSEO[codigo]})": score 
+            for codigo, score in areas_ordenadas
+        }
+        logger.info(f"📊 Scores: {scores_con_nombres}")
         
-        # Retornar hasta 5 categorías principales
-        return categorias_museo[:5]
+        # Si no se detectó nada, sugerir áreas principales
+        if not codigos_con_interes:
+            logger.warning("⚠️ No se detectaron intereses, sugiriendo áreas principales")
+            return ['ARQ-01', 'ETN-01', 'ART-01']  # Áreas core del museo
+        
+        # Retornar hasta 4 áreas con mayor interés
+        return codigos_con_interes[:4]
     
     async def extract_user_interests(self, access_token: str) -> Dict:
         """
@@ -331,15 +311,19 @@ class GoogleAuthService:
             # 2. Subscripciones de YouTube
             youtube_data = await self.get_youtube_subscriptions(access_token)
             
-            # 3. Construir resumen
-            intereses_detectados = youtube_data['categorias_detectadas']
+            # 3. Códigos de áreas detectadas
+            codigos_areas = youtube_data['codigos_areas_detectadas']
             
-            logger.info(f"✅ Extracción completa: {len(intereses_detectados)} categorías detectadas → {intereses_detectados}")
+            # 4. Construir info legible para logs
+            nombres_areas = [self.AREAS_MUSEO[codigo] for codigo in codigos_areas]
+            
+            logger.info(f"✅ Extracción completa: {len(codigos_areas)} áreas → {nombres_areas}")
             
             return {
                 'profile': profile,
                 'youtube': youtube_data,
-                'intereses_detectados': intereses_detectados,
+                'codigos_areas_detectadas': codigos_areas,  # ["ARQ-01", "AVE-01", ...]
+                'nombres_areas_detectadas': nombres_areas,  # Para mostrar en UI
                 'confianza_base': self._calcular_confianza(youtube_data),
                 'fuentes_datos': ['Google Profile', 'YouTube Subscriptions']
             }
@@ -349,21 +333,19 @@ class GoogleAuthService:
             raise
     
     def _calcular_confianza(self, youtube_data: Dict) -> int:
-        """
-        Calcula nivel de confianza basado en cantidad de datos
-        """
+        """Calcula nivel de confianza basado en cantidad de datos"""
         subscriptions = youtube_data.get('total_subscriptions', 0)
-        categorias = len(youtube_data.get('categorias_detectadas', []))
+        areas = len(youtube_data.get('codigos_areas_detectadas', []))
         
         confianza = 0
         
         if subscriptions > 0:
-            confianza += min(40, subscriptions * 2)  # Máximo 40 puntos
+            confianza += min(40, subscriptions * 2)
         
-        if categorias > 0:
-            confianza += min(30, categorias * 10)  # Máximo 30 puntos
+        if areas > 0:
+            confianza += min(30, areas * 10)
         
-        if subscriptions > 0 or categorias > 0:
+        if subscriptions > 0 or areas > 0:
             confianza = max(20, confianza)
         
         return min(100, confianza)
