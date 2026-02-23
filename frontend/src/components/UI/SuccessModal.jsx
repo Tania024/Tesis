@@ -1,37 +1,65 @@
 // components/UI/SuccessModal.jsx
-// ✅ CORREGIDO: Agregar import de useNavigate
-
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';  // ✅ AGREGAR ESTE IMPORT
+import { useNavigate } from 'react-router-dom';
 
 const SuccessModal = ({ isOpen, onClose }) => {
-  const navigate = useNavigate();  // ✅ AGREGAR ESTE HOOK
+  const navigate = useNavigate();
   
-  // Cerrar modal con tecla Escape
+  // Debug logs
+  useEffect(() => {
+    if (isOpen) {
+      console.log('✅ SuccessModal ABIERTO (isOpen=true)');
+    } else {
+      console.log('❌ SuccessModal CERRADO (isOpen=false)');
+    }
+  }, [isOpen]);
+  
   useEffect(() => {
     if (!isOpen) return;
     
     const handleEsc = (event) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') {
+        console.log('⌨️ ESC presionado, cerrando modal');
+        onClose();
+      }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('🚫 SuccessModal no renderiza (isOpen=false)');
+    return null;
+  }
+
+  console.log('✅ SuccessModal renderizando...');
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 transition-opacity duration-300"
-      style={{ zIndex: 100 }}
-      onClick={onClose}
+      className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      style={{ 
+        zIndex: 99999,  // ← Z-INDEX MUY ALTO
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0
+      }}
+      onClick={(e) => {
+        console.log('🖱️ Click en backdrop');
+        e.stopPropagation();
+        onClose();
+      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="success-modal-title"
     >
       <div 
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-100 animate-fade-in"
-        onClick={e => e.stopPropagation()}
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        onClick={e => {
+          console.log('🖱️ Click dentro del modal (no cerrar)');
+          e.stopPropagation();
+        }}
       >
         {/* Barra superior decorativa */}
         <div className="h-1.5 bg-gradient-to-r from-green-400 to-emerald-500" />
@@ -78,8 +106,9 @@ const SuccessModal = ({ isOpen, onClose }) => {
           <div className="mt-6 flex justify-center">
             <button
               onClick={() => {
+                console.log('🚀 Botón Continuar clickeado');
                 onClose();
-                navigate('/');  // ✅ Ahora funciona correctamente
+                navigate('/');
               }}
               className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 w-full transform hover:scale-105"
             >
@@ -90,7 +119,12 @@ const SuccessModal = ({ isOpen, onClose }) => {
 
         {/* Botón de cierre elegante */}
         <button
-          onClick={onClose}
+          onClick={(e) => {
+            console.log('❌ Botón X clickeado');
+            e.stopPropagation();
+            onClose();
+            navigate('/');
+          }}
           className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm text-gray-500 hover:text-gray-700 hover:bg-white transition-all duration-200 shadow-sm flex items-center justify-center"
           aria-label="Cerrar mensaje de éxito"
         >

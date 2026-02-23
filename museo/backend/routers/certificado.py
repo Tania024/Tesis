@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # ============================================
 # LOGO DEL MUSEO (URL PÚBLICA)
 # ============================================
-LOGO_PUMAPUNGO_URL = "https://ibb.co/KjMqXkN9"
+LOGO_PUMAPUNGO_URL = "https://i.ibb.co/99FTNLwq/logopumapungo2.jpg"
 
 # ============================================
 # PLANTILLA HTML DEL CERTIFICADO
@@ -153,7 +153,9 @@ CERTIFICADO_TEMPLATE = """
 </head>
 <body>
     <div class="certificate">
-        <a href="https://imgbb.com/"><img src="https://i.ibb.co/99FTNLwq/logopumapungo2.jpg" alt="logopumapungo2" border="0"></a>
+        <div class="logo-container">
+            <img src="{logo_url}" alt="Logo Museo Pumapungo" class="main-logo">
+        </div>
         
         <div class="header">Ministerio de Cultura y Patrimonio</div>
         <div class="subheader">Gobierno del Ecuador</div>
