@@ -2,11 +2,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
 import logging
+import base64
+
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Attachment, FileContent, FileName, FileType, Disposition
 
 from database import get_db
 from models import Itinerario, Perfil, Visitante
@@ -19,11 +19,10 @@ logger = logging.getLogger(__name__)
 # ============================================
 # LOGO DEL MUSEO (URL PÚBLICA)
 # ============================================
-# ✅ CORREGIDO: URL directa de la imagen
 LOGO_PUMAPUNGO_URL = "https://ibb.co/KjMqXkN9"
 
 # ============================================
-# PLANTILLA HTML DEL CERTIFICADO (DISEÑO VINTAGE PROFESIONAL)
+# PLANTILLA HTML DEL CERTIFICADO
 # ============================================
 CERTIFICADO_TEMPLATE = """
 <!DOCTYPE html>
@@ -192,7 +191,7 @@ CERTIFICADO_TEMPLATE = """
 """
 
 def generar_certificado_html(visitor_name: str, visit_date: str, visitante_id: int, itinerario_id: int) -> str:
-    """Genera HTML del certificado con logo real"""
+    """Genera HTML del certificado"""
     return CERTIFICADO_TEMPLATE.format(
         visitor_name=visitor_name,
         visit_date=visit_date,
@@ -202,23 +201,26 @@ def generar_certificado_html(visitor_name: str, visit_date: str, visitante_id: i
     )
 
 def enviar_certificado_email(email: str, visitor_name: str, html_content: str):
-    """Envía certificado por email"""
+    """Envía certificado por email usando SendGrid API"""
     try:
-        logger.info(f"📧 Preparando envío de certificado a {email}")
+        logger.info(f"📧 Enviando certificado a {email} via SendGrid")
         
-        # Validar configuración
-        if not settings.SMTP_USERNAME or not settings.SMTP_PASSWORD:
-            logger.error("❌ Configuración SMTP incompleta")
-            logger.error(f"   SMTP_USERNAME: {'OK' if settings.SMTP_USERNAME else 'VACÍO'}")
-            logger.error(f"   SMTP_PASSWORD: {'OK' if settings.SMTP_PASSWORD else 'VACÍO'}")
+        # Validar API key
+        if not settings.SENDGRID_API_KEY:
+            logger.error("❌ SENDGRID_API_KEY no configurada")
             return False
         
-        msg = MIMEMultipart()
-        msg['From'] = settings.SMTP_FROM_EMAIL
-        msg['To'] = email
-        msg['Subject'] = '🎉 Tu Certificado de Visita - Museo Pumapungo'
+        # Codificar HTML como adjunto
+        encoded_html = base64.b64encode(html_content.encode('utf-8')).decode()
         
-        # Cuerpo HTML del email (versión para ver en el correo)
+        # Crear mensaje
+        message = Mail(
+            from_email=settings.SMTP_FROM_EMAIL,
+            to_emails=email,
+            subject='🎉 Tu Certificado de Visita - Museo Pumapungo'
+        )
+        
+        # Cuerpo HTML del email
         body_html = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f5eb;">
             <div style="text-align: center; margin-bottom: 30px;">
@@ -226,25 +228,25 @@ def enviar_certificado_email(email: str, visitor_name: str, html_content: str):
                 <p style="font-size: 18px; color: #5a3e2b; margin: 10px 0;">{visitor_name}</p>
             </div>
             
-            <div style="background: white; border: 2px solid #d4b88c; border-radius: 10px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+            <div style="background: white; border: 2px solid #d4b88c; border-radius: 10px; padding: 30px;">
                 <div style="text-align: center; margin-bottom: 25px;">
-                    <div style="font-size: 48px; color: #8b4513; margin: 10px 0; font-family: 'Playfair Display', serif;">CERTIFICADO</div>
+                    <div style="font-size: 48px; color: #8b4513;">CERTIFICADO</div>
                     <div style="font-size: 24px; color: #5a3e2b; font-style: italic;">de Visita</div>
                 </div>
                 
-                <p style="font-size: 16px; line-height: 1.5; color: #5a3e2b; margin: 20px 0;">
-                    Adjunto encontrarás tu certificado personalizado de visita al Museo Pumapungo en formato HTML.
+                <p style="font-size: 16px; color: #5a3e2b; line-height: 1.6;">
+                    Adjunto encontrarás tu <strong>certificado personalizado</strong> de visita al Museo Pumapungo.
                 </p>
                 
-                <div style="background: #f8f4e9; border-left: 4px solid #d4b88c; padding: 15px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                <div style="background: #f8f4e9; border-left: 4px solid #d4b88c; padding: 15px; margin: 25px 0;">
                     <p style="margin: 0; font-style: italic; color: #7a5c46;">
-                        "El Museo Pumapungo es un tesoro cultural que preserva la historia cañari e inca en el corazón de Cuenca"
+                        "El Museo Pumapungo preserva la historia cañari e inca en el corazón de Cuenca"
                     </p>
                 </div>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <div style="display: inline-block; background: #8b4513; color: white; padding: 12px 25px; border-radius: 30px; font-weight: bold; font-size: 18px;">
-                        Museo Pumapungo
+                    <div style="display: inline-block; background: #8b4513; color: white; padding: 12px 25px; border-radius: 30px; font-weight: bold;">
+                        🏛️ Museo Pumapungo
                     </div>
                 </div>
             </div>
@@ -256,34 +258,30 @@ def enviar_certificado_email(email: str, visitor_name: str, html_content: str):
         </div>
         """
         
-        msg.attach(MIMEText(body_html, 'html'))
+        message.add_content(body_html, 'text/html')
         
-        # Adjuntar certificado como HTML descargable
-        part = MIMEApplication(html_content.encode('utf-8'), Name="Certificado_Pumapungo.html")
-        part['Content-Disposition'] = f'attachment; filename="Certificado_Pumapungo_{visitor_name.replace(" ", "_")}.html"'
-        msg.attach(part)
+        # Adjuntar certificado
+        attachment = Attachment(
+            FileContent(encoded_html),
+            FileName(f'Certificado_Pumapungo_{visitor_name.replace(" ", "_")}.html'),
+            FileType('text/html'),
+            Disposition('attachment')
+        )
+        message.add_attachment(attachment)
         
-        # Enviar email
-        logger.info(f"📧 Conectando a {settings.SMTP_HOST}:{settings.SMTP_PORT} con SSL")
+        # Enviar vía SendGrid
+        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+        response = sg.send(message)
         
-        with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-            logger.info(f"🔑 Autenticando como {settings.SMTP_USERNAME}")
-            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
-            
-            logger.info(f"📤 Enviando mensaje...")
-            server.send_message(msg)
+        logger.info(f"✅ SendGrid response: {response.status_code}")
         
-        logger.info(f"✅ Certificado enviado exitosamente a {email}")
-        return True
+        if response.status_code in [200, 201, 202]:
+            logger.info(f"✅ Email enviado exitosamente a {email}")
+            return True
+        else:
+            logger.error(f"❌ SendGrid error: {response.status_code} - {response.body}")
+            return False
         
-    except smtplib.SMTPAuthenticationError as e:
-        logger.error(f"❌ Error de autenticación SMTP: {str(e)}")
-        logger.error(f"   Usuario: {settings.SMTP_USERNAME}")
-        logger.error(f"   Host: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
-        return False
-    except smtplib.SMTPException as e:
-        logger.error(f"❌ Error SMTP: {type(e).__name__}: {str(e)}")
-        return False
     except Exception as e:
         logger.error(f"❌ Error enviando email: {type(e).__name__}: {str(e)}")
         import traceback
@@ -336,14 +334,9 @@ async def generar_y_enviar_certificado(
             html_content=html_certificado
         )
         
-        if email_enviado:
-            logger.info(f"✅ Certificado generado y enviado a {visitante.email}")
-        else:
-            logger.warning(f"⚠️ Certificado generado pero no se pudo enviar por email")
-        
         return {
             "success": True,
-            "message": "Certificado generado y enviado a tu email" if email_enviado else "Certificado generado (error al enviar email)",
+            "message": "Certificado enviado a tu email" if email_enviado else "Error al enviar email",
             "email": visitante.email,
             "email_enviado": email_enviado
         }
@@ -351,8 +344,5 @@ async def generar_y_enviar_certificado(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error en generación de certificado: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error al generar certificado: {str(e)}"
-        )
+        logger.error(f"❌ Error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

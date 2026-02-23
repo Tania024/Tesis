@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     # ============================================
     # SMTP
     # ============================================
+    SENDGRID_API_KEY: str = ""
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 465
     SMTP_USE_TLS: bool = True
