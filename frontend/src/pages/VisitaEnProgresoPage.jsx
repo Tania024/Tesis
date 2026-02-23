@@ -139,23 +139,7 @@ const VisitaEnProgresoPage = () => {
     setMostrarEvaluacion(true);
   };
 
-const handleEnviarEvaluacion = async (evaluacion) => {
-  try {
-    // Guardar evaluación
-    await itinerariosAPI.guardarEvaluacion(parseInt(id), evaluacion);
-    
-    // Completar itinerario
-    await itinerariosAPI.actualizar(id, { estado: 'completado' });
-    
-    // ✅ Cerrar modal y redirigir
-    setMostrarEvaluacion(false);
-    navigate(`/itinerarios/${id}`);
-    
-  } catch (err) {
-    console.error('❌ Error guardando evaluación:', err);
-    // El error ya se maneja en EvaluacionModal.jsx
-  }
-};
+
 
   const formatearTiempo = (segundos) => {
     const h = Math.floor(segundos / 3600);
@@ -572,7 +556,6 @@ const handleEnviarEvaluacion = async (evaluacion) => {
         <EvaluacionModal
   isOpen={mostrarEvaluacion}
   onClose={() => setMostrarEvaluacion(false)}
-  onSubmit={handleEnviarEvaluacion}
   itinerarioId={parseInt(id)}
 />
       )}
