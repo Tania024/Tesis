@@ -264,13 +264,9 @@ def enviar_certificado_email(email: str, visitor_name: str, html_content: str):
         msg.attach(part)
         
         # Enviar email
-        logger.info(f"📧 Conectando a {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+        logger.info(f"📧 Conectando a {settings.SMTP_HOST}:{settings.SMTP_PORT} con SSL")
         
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-            if settings.SMTP_USE_TLS:
-                logger.info("🔒 Iniciando TLS...")
-                server.starttls()
-            
+        with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
             logger.info(f"🔑 Autenticando como {settings.SMTP_USERNAME}")
             server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
             
