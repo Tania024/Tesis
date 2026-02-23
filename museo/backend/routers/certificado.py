@@ -6,6 +6,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+import logging
 
 from database import get_db
 from models import Itinerario, Perfil, Visitante
@@ -13,12 +14,13 @@ from config import get_settings
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 # ============================================
 # LOGO DEL MUSEO (URL PÚBLICA)
 # ============================================
-# Sube tu logo a https://imgbb.com/ y pega la URL aquí
-LOGO_PUMAPUNGO_URL = "https://ibb.co/KjMqXkN9"  # ✅ URL PÚBLICA VÁLIDA
+# ✅ CORREGIDO: URL directa de la imagen
+LOGO_PUMAPUNGO_URL = "https://ibb.co/KjMqXkN9"
 
 # ============================================
 # PLANTILLA HTML DEL CERTIFICADO (DISEÑO VINTAGE PROFESIONAL)
@@ -152,12 +154,14 @@ CERTIFICADO_TEMPLATE = """
 </head>
 <body>
     <div class="certificate">
-        <a href="https://imgbb.com/"><img src="https://i.ibb.co/99FTNLwq/logopumapungo2.jpg" alt="logopumapungo2" border="0"></a>
+        <div class="logo-container">
+            <img src="{logo_url}" alt="Logo Museo Pumapungo" class="main-logo">
+        </div>
         
         <div class="header">Ministerio de Cultura y Patrimonio</div>
         <div class="subheader">Gobierno del Ecuador</div>
         
-        <div class="visitor-name">CERTIFICADO DE VISITA</div>
+        <div class="title">Certificado de Visita</div>
         
         <p>Se otorga el presente reconocimiento a:</p>
         <div class="visitor-name">{visitor_name}</div>
@@ -194,12 +198,21 @@ def generar_certificado_html(visitor_name: str, visit_date: str, visitante_id: i
         visit_date=visit_date,
         visitante_id=visitante_id,
         itinerario_id=itinerario_id,
-        logo_url=LOGO_PUMAPUNGO_URL  # ✅ URL PÚBLICA DEL LOGO
+        logo_url=LOGO_PUMAPUNGO_URL
     )
 
 def enviar_certificado_email(email: str, visitor_name: str, html_content: str):
     """Envía certificado por email"""
     try:
+        logger.info(f"📧 Preparando envío de certificado a {email}")
+        
+        # Validar configuración
+        if not settings.SMTP_USERNAME or not settings.SMTP_PASSWORD:
+            logger.error("❌ Configuración SMTP incompleta")
+            logger.error(f"   SMTP_USERNAME: {'OK' if settings.SMTP_USERNAME else 'VACÍO'}")
+            logger.error(f"   SMTP_PASSWORD: {'OK' if settings.SMTP_PASSWORD else 'VACÍO'}")
+            return False
+        
         msg = MIMEMultipart()
         msg['From'] = settings.SMTP_FROM_EMAIL
         msg['To'] = email
@@ -251,17 +264,34 @@ def enviar_certificado_email(email: str, visitor_name: str, html_content: str):
         msg.attach(part)
         
         # Enviar email
+        logger.info(f"📧 Conectando a {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+        
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
             if settings.SMTP_USE_TLS:
+                logger.info("🔒 Iniciando TLS...")
                 server.starttls()
+            
+            logger.info(f"🔑 Autenticando como {settings.SMTP_USERNAME}")
             server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+            
+            logger.info(f"📤 Enviando mensaje...")
             server.send_message(msg)
         
-        print(f"✅ Certificado enviado a {email}")
+        logger.info(f"✅ Certificado enviado exitosamente a {email}")
         return True
         
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"❌ Error de autenticación SMTP: {str(e)}")
+        logger.error(f"   Usuario: {settings.SMTP_USERNAME}")
+        logger.error(f"   Host: {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+        return False
+    except smtplib.SMTPException as e:
+        logger.error(f"❌ Error SMTP: {type(e).__name__}: {str(e)}")
+        return False
     except Exception as e:
-        print(f"❌ Error enviando email: {str(e)}")
+        logger.error(f"❌ Error enviando email: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 @router.post("/itinerarios/{itinerario_id}/certificado")
@@ -270,43 +300,63 @@ async def generar_y_enviar_certificado(
     db: Session = Depends(get_db)
 ):
     """Genera y envía certificado al finalizar evaluación"""
-    # Obtener itinerario
-    itinerario = db.query(Itinerario).filter(Itinerario.id == itinerario_id).first()
-    if not itinerario:
-        raise HTTPException(status_code=404, detail="Itinerario no encontrado")
-    
-    # Obtener perfil
-    perfil = db.query(Perfil).filter(Perfil.id == itinerario.perfil_id).first()
-    if not perfil:
-        raise HTTPException(status_code=404, detail="Perfil no encontrado")
-    
-    # Obtener visitante
-    visitante = perfil.visitante
-    if not visitante:
-        raise HTTPException(status_code=404, detail="Visitante no encontrado")
-    
-    # Verificar email
-    if not visitante.email:
-        raise HTTPException(status_code=400, detail="Visitante no tiene email registrado")
-    
-    # Generar certificado
-    visit_date = itinerario.fecha_generacion.strftime("%d de %B de %Y")
-    html_certificado = generar_certificado_html(
-        visitor_name=f"{visitante.nombre} {visitante.apellido}".strip(),
-        visit_date=visit_date,
-        visitante_id=visitante.id,
-        itinerario_id=itinerario_id
-    )
-    
-    # Enviar email
-    email_enviado = enviar_certificado_email(
-        email=visitante.email,
-        visitor_name=f"{visitante.nombre} {visitante.apellido}".strip(),
-        html_content=html_certificado
-    )
-    
-    return {
-        "success": True,
-        "message": "Certificado generado" + (" y enviado a tu email" if email_enviado else " (email no configurado en desarrollo)"),
-        "email": visitante.email
-    }
+    try:
+        logger.info(f"📜 Generando certificado para itinerario {itinerario_id}")
+        
+        # Obtener itinerario
+        itinerario = db.query(Itinerario).filter(Itinerario.id == itinerario_id).first()
+        if not itinerario:
+            raise HTTPException(status_code=404, detail="Itinerario no encontrado")
+        
+        # Obtener perfil
+        perfil = db.query(Perfil).filter(Perfil.id == itinerario.perfil_id).first()
+        if not perfil:
+            raise HTTPException(status_code=404, detail="Perfil no encontrado")
+        
+        # Obtener visitante
+        visitante = perfil.visitante
+        if not visitante:
+            raise HTTPException(status_code=404, detail="Visitante no encontrado")
+        
+        # Verificar email
+        if not visitante.email:
+            raise HTTPException(status_code=400, detail="Visitante no tiene email registrado")
+        
+        # Generar certificado
+        visit_date = itinerario.fecha_generacion.strftime("%d de %B de %Y")
+        visitor_full_name = f"{visitante.nombre} {visitante.apellido or ''}".strip()
+        
+        html_certificado = generar_certificado_html(
+            visitor_name=visitor_full_name,
+            visit_date=visit_date,
+            visitante_id=visitante.id,
+            itinerario_id=itinerario_id
+        )
+        
+        # Enviar email
+        email_enviado = enviar_certificado_email(
+            email=visitante.email,
+            visitor_name=visitor_full_name,
+            html_content=html_certificado
+        )
+        
+        if email_enviado:
+            logger.info(f"✅ Certificado generado y enviado a {visitante.email}")
+        else:
+            logger.warning(f"⚠️ Certificado generado pero no se pudo enviar por email")
+        
+        return {
+            "success": True,
+            "message": "Certificado generado y enviado a tu email" if email_enviado else "Certificado generado (error al enviar email)",
+            "email": visitante.email,
+            "email_enviado": email_enviado
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error en generación de certificado: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al generar certificado: {str(e)}"
+        )
