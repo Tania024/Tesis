@@ -153,9 +153,7 @@ CERTIFICADO_TEMPLATE = """
 </head>
 <body>
     <div class="certificate">
-        <div class="logo-container">
-            <img src="{logo_url}" alt="Logo Museo Pumapungo" class="main-logo">
-        </div>
+        <a href="https://imgbb.com/"><img src="https://i.ibb.co/99FTNLwq/logopumapungo2.jpg" alt="logopumapungo2" border="0"></a>
         
         <div class="header">Ministerio de Cultura y Patrimonio</div>
         <div class="subheader">Gobierno del Ecuador</div>
