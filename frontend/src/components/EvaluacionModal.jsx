@@ -47,7 +47,6 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
   };
 
   const handleSubmit = async () => {
-    // Validación 1: Calificación general
     if (!calificacionGeneral) {
       setWarningModal({
         isOpen: true,
@@ -56,7 +55,6 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
       return;
     }
 
-    // Validación 2: Todas las preguntas respondidas
     const todasRespondidas = Object.values(respuestas).every(r => r !== null);
     if (!todasRespondidas) {
       setWarningModal({
@@ -78,43 +76,26 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
 
     try {
       // 1. Guardar evaluación
-      console.log('📝 [1/3] Guardando evaluación...');
       await onSubmit(evaluacion);
-      console.log('✅ [1/3] Evaluación guardada');
       
       // 2. Marcar itinerario como completado
-      console.log('⏰ [2/3] Marcando itinerario como completado...');
       await itinerariosAPI.actualizarItinerario(itinerarioId, { 
         estado: 'completado',
         fecha_fin: new Date().toISOString()
       });
-      console.log('✅ [2/3] Itinerario completado');
       
       // 3. Intentar generar certificado (NO CRÍTICO)
-      console.log('📜 [3/3] Generando certificado...');
       try {
-        const response = await itinerariosAPI.generarCertificado(itinerarioId);
-        
-        if (response?.email_enviado) {
-          console.log('✅ [3/3] Certificado enviado al email');
-        } else {
-          console.warn('⚠️ [3/3] Certificado generado pero email no enviado');
-        }
+        await itinerariosAPI.generarCertificado(itinerarioId);
       } catch (certError) {
-        console.warn('⚠️ [3/3] Error certificado (no crítico):', certError.message);
+        console.warn('⚠️ Certificado falló (no crítico)');
       }
       
-      // 4. ✅ MOSTRAR MODAL DE ÉXITO (SIEMPRE)
-      console.log('🎉 Mostrando modal de éxito...');
-      
-      // ⏰ Pequeño delay para asegurar que el estado se actualice
-      setTimeout(() => {
-        setSuccessModal(true);
-        console.log('✅ Modal de éxito activado (state: true)');
-      }, 100);
+      // 4. ✅ MOSTRAR MODAL DE ÉXITO SIEMPRE
+      setSuccessModal(true);
       
     } catch (error) {
-      console.error('❌ Error CRÍTICO:', error);
+      console.error('❌ Error:', error);
       
       const errorMessage = error.response?.data?.detail || 
                           error.message || 
@@ -130,46 +111,44 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
   };
 
   const handleSuccessClose = () => {
-    console.log('👋 Cerrando modal de éxito...');
     setSuccessModal(false);
     onClose();
   };
 
-  // ✅ NO cerrar el modal de evaluación si el modal de éxito está abierto
+  // ⚠️ IMPORTANTE: No cerrar el componente si el modal de éxito está abierto
   if (!isOpen && !successModal) return null;
 
   return (
     <>
-      {/* MODAL PRINCIPAL DE EVALUACIÓN */}
+      {/* MODAL DE EVALUACIÓN - Solo mostrar si NO está el modal de éxito */}
       {isOpen && !successModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-xl">
-              <h2 className="text-2xl font-bold mb-2">¡Gracias por tu visita! 🎉</h2>
-              <p className="text-purple-100">Tu opinión nos ayuda a mejorar la experiencia para futuros visitantes</p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4 md:p-6">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 sm:p-6 rounded-t-xl">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">¡Gracias por tu visita! 🎉</h2>
+              <p className="text-xs sm:text-sm md:text-base text-purple-100">Tu opinión nos ayuda a mejorar</p>
             </div>
 
-            <div className="p-6 space-y-8">
-              {/* Calificación general */}
+            <div className="p-4 sm:p-6 space-y-6 sm:space-y-8">
+              {/* Calificación */}
               <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 text-center">
                   ¿Cómo fue tu experiencia?
                 </h3>
                 
-                <div className="flex justify-center gap-4">
+                <div className="flex justify-center gap-2 sm:gap-3 md:gap-4 flex-wrap">
                   {emojis.map(({ valor, emoji, label, color }) => (
                     <button
                       key={valor}
                       onClick={() => setCalificacionGeneral(valor)}
-                      className={`flex flex-col items-center p-4 rounded-xl transition-all transform hover:scale-110 ${
+                      className={`flex flex-col items-center p-2 sm:p-3 md:p-4 rounded-xl transition-all ${
                         calificacionGeneral === valor
-                          ? 'bg-purple-100 ring-4 ring-purple-500 scale-110'
-                          : 'bg-gray-50 hover:bg-gray-100'
+                          ? 'bg-purple-100 ring-2 sm:ring-4 ring-purple-500 scale-105'
+                          : 'bg-gray-50'
                       }`}
                     >
-                      <span className={`text-5xl ${color}`}>{emoji}</span>
-                      <span className="text-xs font-medium text-gray-600 mt-2">{label}</span>
+                      <span className={`text-3xl sm:text-4xl md:text-5xl ${color}`}>{emoji}</span>
+                      <span className="text-[10px] sm:text-xs font-medium text-gray-600 mt-1">{label}</span>
                     </button>
                   ))}
                 </div>
@@ -178,38 +157,38 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
               <div className="border-t border-gray-200"></div>
 
               {/* Preguntas */}
-              <div className="space-y-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">
-                  Ayúdanos a mejorar respondiendo estas preguntas:
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
+                  Ayúdanos a mejorar:
                 </h3>
 
                 {preguntas.map(({ id, texto }) => (
-                  <div key={id} className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-gray-800 font-medium mb-3">{texto}</p>
+                  <div key={id} className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                    <p className="text-xs sm:text-sm md:text-base text-gray-800 font-medium mb-2 sm:mb-3">{texto}</p>
                     
-                    <div className="flex justify-center gap-6">
+                    <div className="flex justify-center gap-4 sm:gap-6">
                       <button
                         onClick={() => handleRespuesta(id, false)}
-                        className={`flex flex-col items-center p-3 rounded-lg transition-all transform hover:scale-105 ${
+                        className={`flex flex-col items-center p-2 sm:p-3 rounded-lg transition-all ${
                           respuestas[id] === false
                             ? 'bg-red-100 ring-2 ring-red-500'
-                            : 'bg-white hover:bg-gray-100'
+                            : 'bg-white'
                         }`}
                       >
-                        <span className="text-3xl">👎</span>
-                        <span className="text-xs font-medium text-gray-600 mt-1">No</span>
+                        <span className="text-2xl sm:text-3xl">👎</span>
+                        <span className="text-[10px] sm:text-xs font-medium text-gray-600 mt-1">No</span>
                       </button>
 
                       <button
                         onClick={() => handleRespuesta(id, true)}
-                        className={`flex flex-col items-center p-3 rounded-lg transition-all transform hover:scale-105 ${
+                        className={`flex flex-col items-center p-2 sm:p-3 rounded-lg transition-all ${
                           respuestas[id] === true
                             ? 'bg-green-100 ring-2 ring-green-500'
-                            : 'bg-white hover:bg-gray-100'
+                            : 'bg-white'
                         }`}
                       >
-                        <span className="text-3xl">👍</span>
-                        <span className="text-xs font-medium text-gray-600 mt-1">Sí</span>
+                        <span className="text-2xl sm:text-3xl">👍</span>
+                        <span className="text-[10px] sm:text-xs font-medium text-gray-600 mt-1">Sí</span>
                       </button>
                     </div>
                   </div>
@@ -218,24 +197,24 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
 
               {/* Comentarios */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ¿Algo más que quieras compartir? (Opcional)
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  ¿Algo más? (Opcional)
                 </label>
                 <textarea
                   value={comentarios}
                   onChange={(e) => setComentarios(e.target.value)}
-                  placeholder="Cuéntanos más sobre tu experiencia..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-                  rows="4"
+                  placeholder="Cuéntanos más..."
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 resize-none text-sm sm:text-base"
+                  rows="3"
                 />
               </div>
 
               {/* Botones */}
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
                   onClick={onClose}
                   disabled={enviando}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm sm:text-base"
                 >
                   Cancelar
                 </button>
@@ -243,19 +222,9 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
                 <button
                   onClick={handleSubmit}
                   disabled={enviando || !calificacionGeneral || Object.values(respuestas).some(r => r === null)}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  className="w-full sm:flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 shadow-lg text-sm sm:text-base"
                 >
-                  {enviando ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Procesando...
-                    </span>
-                  ) : (
-                    'Enviar Evaluación'
-                  )}
+                  {enviando ? 'Procesando...' : 'Enviar Evaluación'}
                 </button>
               </div>
             </div>
@@ -263,13 +232,14 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
         </div>
       )}
 
-      {/* MODALES DE NOTIFICACIÓN */}
+      {/* MODALES */}
       <WarningModal 
         isOpen={warningModal.isOpen}
         message={warningModal.message}
         onClose={() => setWarningModal({ isOpen: false, message: '' })}
       />
 
+      {/* ✅ MODAL DE ÉXITO - SIEMPRE RENDERIZADO */}
       <SuccessModal 
         isOpen={successModal}
         onClose={handleSuccessClose}
