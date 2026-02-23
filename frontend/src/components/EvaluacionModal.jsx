@@ -4,7 +4,6 @@ import WarningModal from './UI/WarningModal';
 import SuccessModal from './UI/SuccessModal';
 import ErrorModal from './UI/ErrorModal';
 
-
 const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
   const [calificacionGeneral, setCalificacionGeneral] = useState(null);
   const [respuestas, setRespuestas] = useState({
@@ -18,7 +17,7 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
   const [comentarios, setComentarios] = useState('');
   const [enviando, setEnviando] = useState(false);
 
-  // 🔥 ESTADOS PARA MODALES BONITOS
+  // Estados para modales
   const [warningModal, setWarningModal] = useState({ isOpen: false, message: '' });
   const [successModal, setSuccessModal] = useState(false);
   const [errorModal, setErrorModal] = useState({ isOpen: false, message: '' });
@@ -48,7 +47,7 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
   };
 
   const handleSubmit = async () => {
-    // ✅ VALIDACIÓN 1: Calificación general (CON MODAL BONITO)
+    // Validación 1: Calificación general
     if (!calificacionGeneral) {
       setWarningModal({
         isOpen: true,
@@ -57,7 +56,7 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
       return;
     }
 
-    // ✅ VALIDACIÓN 2: Todas las preguntas respondidas (CON MODAL BONITO)
+    // Validación 2: Todas las preguntas respondidas
     const todasRespondidas = Object.values(respuestas).every(r => r !== null);
     if (!todasRespondidas) {
       setWarningModal({
@@ -78,30 +77,45 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
     };
 
     try {
-      // 1. Enviar evaluación
+      // 1. Guardar evaluación (CRÍTICO - debe funcionar)
+      console.log('📝 Guardando evaluación...');
       await onSubmit(evaluacion);
+      console.log('✅ Evaluación guardada exitosamente');
       
-      // 2. 🔥 MARCAR ITINERARIO COMO COMPLETADO
-      console.log('✅ Marcando itinerario como completado:', itinerarioId);
+      // 2. Marcar itinerario como completado (CRÍTICO - debe funcionar)
+      console.log('⏰ Marcando itinerario como completado:', itinerarioId);
       await itinerariosAPI.actualizarItinerario(itinerarioId, { 
         estado: 'completado',
         fecha_fin: new Date().toISOString()
       });
+      console.log('✅ Itinerario marcado como completado');
       
-      // 3. Generar y enviar certificado
-      console.log('📨 Generando certificado para itinerario:', itinerarioId);
-      const response = await itinerariosAPI.generarCertificado(itinerarioId);
+      // 3. Intentar generar certificado (NO CRÍTICO - puede fallar)
+      try {
+        console.log('📜 Generando certificado para itinerario:', itinerarioId);
+        const response = await itinerariosAPI.generarCertificado(itinerarioId);
+        
+        if (response.email_enviado) {
+          console.log('✅ Certificado enviado exitosamente al email');
+        } else {
+          console.warn('⚠️ Certificado generado pero no se pudo enviar por email');
+        }
+      } catch (certError) {
+        // El certificado falló, pero NO importa - ya guardamos la evaluación
+        console.warn('⚠️ Error generando certificado (no crítico):', certError);
+        console.warn('   La evaluación fue guardada correctamente');
+      }
       
-      console.log('✅ Certificado generado:', response);
-      
-      // 4. ✅ MOSTRAR MODAL DE ÉXITO
+      // 4. ✅ MOSTRAR MODAL DE ÉXITO SIEMPRE
+      // (Incluso si el certificado falló, porque la evaluación SÍ se guardó)
+      console.log('🎉 Mostrando modal de éxito');
       setSuccessModal(true);
       
     } catch (error) {
-      console.error('❌ Error enviando evaluación o certificado:', error);
-      console.error('Response:', error.response?.data);
+      // Solo llegamos aquí si falló la evaluación o marcar como completado
+      console.error('❌ Error CRÍTICO en evaluación:', error);
+      console.error('   Response:', error.response?.data);
       
-      // ✅ MOSTRAR MODAL DE ERROR (en lugar de alert feo)
       const errorMessage = error.response?.data?.detail || 
                           error.message || 
                           'Error al procesar tu evaluación. Por favor, intenta de nuevo.';
@@ -115,10 +129,9 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
     }
   };
 
-  // ✅ CERRAR SUCCESS MODAL Y EL MODAL DE EVALUACIÓN
   const handleSuccessClose = () => {
     setSuccessModal(false);
-    onClose(); // Cerrar el modal de evaluación también
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -249,7 +262,7 @@ const EvaluacionModal = ({ isOpen, onClose, onSubmit, itinerarioId }) => {
         </div>
       </div>
 
-      {/* 🔥 MODALES DE NOTIFICACIÓN BONITOS (REEMPLAZAN LOS ALERTS) */}
+      {/* MODALES DE NOTIFICACIÓN */}
       <WarningModal 
         isOpen={warningModal.isOpen}
         message={warningModal.message}
