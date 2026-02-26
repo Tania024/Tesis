@@ -8,6 +8,7 @@ import logging
 from datetime import datetime, timezone
 
 from database import get_db
+from utils.horarios_museo import validar_horario_museo, ajustar_itinerario_por_tiempo
 from models import Itinerario, Perfil, Visitante, Area, ItinerarioDetalle
 from schemas import (
     ItinerarioCreate, 
@@ -57,6 +58,7 @@ async def verificar_estado_ia():
 # CREATE - Generación con IA
 # ============================================
 
+
 @router.post("/generar", response_model=ItinerarioResponse, status_code=status.HTTP_201_CREATED)
 async def generar_itinerario_ia(
     solicitud: SolicitudItinerario,
@@ -64,6 +66,7 @@ async def generar_itinerario_ia(
 ):
     """
     🤖 Generar itinerario personalizado usando IA generativa
+    ✅ CON validación de horarios Y generación background
     """
     try:
         # 1. Verificar visitante
@@ -71,15 +74,37 @@ async def generar_itinerario_ia(
         if not visitante:
             raise HTTPException(status_code=404, detail="Visitante no encontrado")
         
-        logger.info(f"🚀 Generando itinerario para {visitante.nombre} ({solicitud.tiempo_disponible} min)")
+        # ============================================
+        # 2. ✅ VALIDAR HORARIOS DEL MUSEO
+        # ============================================
+        puede_generar, duracion_ajustada, mensaje_horario = ajustar_itinerario_por_tiempo(
+            duracion_solicitada=solicitud.tiempo_disponible,
+            fecha_hora_actual=None
+        )
         
-        # 2. Obtener o crear perfil
+        if not puede_generar:
+            logger.warning(f"⏰ Intento fuera de horario")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "mensaje": "Museo cerrado o tiempo insuficiente",
+                    "horarios": mensaje_horario
+                }
+            )
+        
+        # Usar tiempo ajustado
+        tiempo_final = duracion_ajustada if duracion_ajustada is not None else solicitud.tiempo_disponible
+        
+        if tiempo_final != solicitud.tiempo_disponible:
+            logger.info(f"⏰ Tiempo ajustado: {solicitud.tiempo_disponible} → {tiempo_final} minutos")
+        
+        # 3. Obtener o crear perfil
         perfil = db.query(Perfil).filter(Perfil.visitante_id == solicitud.visitante_id).first()
         if not perfil:
             perfil = Perfil(
                 visitante_id=solicitud.visitante_id,
                 intereses=solicitud.intereses,
-                tiempo_disponible=solicitud.tiempo_disponible,
+                tiempo_disponible=tiempo_final,  # ✅
                 nivel_detalle=solicitud.nivel_detalle.value,
                 incluir_descansos=solicitud.incluir_descansos
             )
@@ -87,13 +112,13 @@ async def generar_itinerario_ia(
             db.commit()
             db.refresh(perfil)
         
-        # 3. Obtener áreas disponibles
+        # 4. Obtener áreas disponibles
         query = db.query(Area).filter(Area.activa == True)
         
-        if solicitud.tiempo_disponible is not None and solicitud.intereses:
+        if tiempo_final is not None and solicitud.intereses:
             query = query.filter(Area.categoria.in_(solicitud.intereses))
             logger.info(f"🔍 Filtrando por categorías: {solicitud.intereses}")
-        elif solicitud.tiempo_disponible is None:
+        elif tiempo_final is None:
             logger.info(f"♾️ Sin límite de tiempo: incluyendo TODAS las áreas")
         
         if solicitud.areas_evitar:
@@ -124,7 +149,7 @@ async def generar_itinerario_ia(
             for area in areas_disponibles
         ]
         
-        # 4. 🤖 CREAR ITINERARIO EN BD PRIMERO
+        # 5. 🤖 CREAR ITINERARIO EN BD PRIMERO
         nuevo_itinerario = Itinerario(
             perfil_id=perfil.id,
             titulo="Generando...",
@@ -140,8 +165,8 @@ async def generar_itinerario_ia(
         
         logger.info(f"✅ Itinerario {nuevo_itinerario.id} creado en BD")
         
-        # 5. 🔥 GENERAR CON IA
-        logger.info(f"🤖 Solicitando generación con IA para itinerario {nuevo_itinerario.id}")
+        # 6. 🔥 GENERAR CON BACKGROUND THREAD
+        logger.info(f"🤖 Solicitando generación con background para itinerario {nuevo_itinerario.id}")
         
         nombre_completo = f"{visitante.nombre} {visitante.apellido or ''}".strip()
         
@@ -149,12 +174,12 @@ async def generar_itinerario_ia(
             resultado_ia = ia_service.generar_itinerario_progresivo(
                 visitante_nombre=nombre_completo,
                 intereses=solicitud.intereses,
-                tiempo_disponible=solicitud.tiempo_disponible,
+                tiempo_disponible=tiempo_final,
                 nivel_detalle=solicitud.nivel_detalle.value,
                 areas_disponibles=areas_dict,
                 incluir_descansos=solicitud.incluir_descansos,
-                db_session=db,
-                itinerario_id=nuevo_itinerario.id
+                db_session=db,             
+                itinerario_id=nuevo_itinerario.id  
             )
         except Exception as e:
             logger.error(f"❌ Error al generar con IA: {e}")
@@ -164,7 +189,7 @@ async def generar_itinerario_ia(
                 detail=f"Error al generar itinerario con IA: {str(e)}"
             )
         
-        # 6. Actualizar itinerario con info generada
+        # 7. Actualizar itinerario con info generada
         nuevo_itinerario.titulo = resultado_ia.get("titulo", "Itinerario Personalizado")
         nuevo_itinerario.descripcion = resultado_ia.get("descripcion", "Itinerario generado con IA")
         nuevo_itinerario.duracion_total = resultado_ia.get("duracion_total", 60)
@@ -184,7 +209,7 @@ async def generar_itinerario_ia(
         db.commit()
         db.refresh(nuevo_itinerario)
         
-        # 7. Crear detalles del itinerario
+        # 8. Crear detalles del itinerario
         mapeo_areas = {area.codigo: area for area in areas_disponibles}
         
         for area_ia in resultado_ia["areas"]:
@@ -224,7 +249,7 @@ async def generar_itinerario_ia(
         db.commit()
         db.refresh(nuevo_itinerario)
         
-        logger.info(f"✅ Itinerario {nuevo_itinerario.id} generado completamente")
+        logger.info(f"✅ Itinerario {nuevo_itinerario.id} generado. Primera área lista, resto generándose en background")
         
         return nuevo_itinerario
     
@@ -319,6 +344,7 @@ async def estadisticas_itinerarios(db: Session = Depends(get_db)):
 async def obtener_estadisticas_itinerarios(db: Session = Depends(get_db)):
     """
     Obtiene estadísticas generales de itinerarios para el panel administrativo
+    ✅ CORREGIDO: Endpoint movido antes de /{itinerario_id}
     """
     try:
         logger.info("📊 Iniciando cálculo de estadísticas de itinerarios...")
@@ -440,7 +466,7 @@ async def obtener_itinerarios_visitante(
     
     itinerarios = db.query(Itinerario).filter(Itinerario.perfil_id == perfil.id).all()
     
-    # Agregar conteo de áreas para cada itinerario
+    # 🔥 AGREGAR: Conteo de áreas para cada itinerario
     resultado = []
     for itinerario in itinerarios:
         itinerario_dict = {
@@ -457,13 +483,14 @@ async def obtener_itinerarios_visitante(
             "modelo_ia_usado": itinerario.modelo_ia_usado,
             "tipo_entrada": itinerario.tipo_entrada,
             "acompañantes": itinerario.acompañantes,
+            # 🔥 NUEVO: Conteo de áreas
             "numero_areas": len(itinerario.detalles) if itinerario.detalles else 0,
+            # Incluir detalles si existen
             "detalles": itinerario.detalles
         }
         resultado.append(itinerario_dict)
     
     return {"total": len(resultado), "itinerarios": resultado}
-
 # ============================================
 # READ - ENDPOINT GENÉRICO AL FINAL
 # ============================================

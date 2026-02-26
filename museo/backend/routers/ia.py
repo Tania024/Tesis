@@ -1,16 +1,22 @@
 # routers/ia.py
-# ✅ ACTUALIZADO: Compatible con Ollama y DeepSeek (SIN validación de horarios)
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import time
 import logging
+from datetime import datetime
 
 from config import get_settings
 from database import get_db
 import models
 import schemas
 from services.ia_service import ia_service
+
+from utils.horarios_museo import (
+    validar_horario_museo,
+    ajustar_itinerario_por_tiempo,
+    obtener_mensaje_horarios
+)
 
 router = APIRouter()
 settings = get_settings()
@@ -34,6 +40,7 @@ def chat(prompt: str):
 
 # ============================================
 # Generación Progresiva de Itinerarios
+# (Sin cambios — ya usa ia_service internamente)
 # ============================================
 
 @router.post("/generar-itinerario-progresivo", response_model=schemas.ItinerarioCompleto)
@@ -42,7 +49,7 @@ async def generar_itinerario_progresivo(
     db: Session = Depends(get_db)
 ):
     """
-    🔥 Generación progresiva de itinerarios
+    🔥 Generación progresiva con validación de horarios
     Funciona con Ollama (local) y DeepSeek (producción)
     """
     try:
@@ -57,7 +64,34 @@ async def generar_itinerario_progresivo(
         if not visitante:
             raise HTTPException(status_code=404, detail="Visitante no encontrado")
         
-        # Obtener o crear perfil
+        # VALIDAR HORARIO DEL MUSEO
+        fecha_hora_actual = datetime.now()
+        
+        puede_generar, duracion_ajustada, mensaje_horario = ajustar_itinerario_por_tiempo(
+            solicitud.tiempo_disponible,
+            fecha_hora_actual
+        )
+        
+        if not puede_generar:
+            logger.warning(f"⏰ No se puede generar itinerario: {mensaje_horario[:100]}")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "mensaje": mensaje_horario,
+                    "horarios": obtener_mensaje_horarios(),
+                    "puede_continuar": False
+                }
+            )
+        
+        if duracion_ajustada != solicitud.tiempo_disponible:
+            logger.info(f"⏰ Tiempo ajustado: {solicitud.tiempo_disponible} -> {duracion_ajustada} min")
+            tiempo_para_itinerario = duracion_ajustada
+        else:
+            tiempo_para_itinerario = solicitud.tiempo_disponible
+        
+        logger.info(f"✅ Museo abierto. Tiempo: {tiempo_para_itinerario} min")
+        
+        # Obtener perfil
         perfil = db.query(models.Perfil).filter(
             models.Perfil.visitante_id == solicitud.visitante_id
         ).first()
@@ -66,7 +100,7 @@ async def generar_itinerario_progresivo(
             perfil = models.Perfil(
                 visitante_id=solicitud.visitante_id,
                 intereses=solicitud.intereses,
-                tiempo_disponible=solicitud.tiempo_disponible,
+                tiempo_disponible=tiempo_para_itinerario,
                 nivel_detalle=solicitud.nivel_detalle,
                 incluir_descansos=solicitud.incluir_descansos
             )
@@ -74,18 +108,16 @@ async def generar_itinerario_progresivo(
             db.commit()
             db.refresh(perfil)
         
-        logger.info(f"✅ Perfil obtenido. Tiempo solicitado: {solicitud.tiempo_disponible} min")
-        
         # Obtener áreas disponibles
         areas_query = db.query(models.Area).filter(models.Area.activa == True)
         
-        if solicitud.intereses and solicitud.tiempo_disponible:
+        if solicitud.intereses and tiempo_para_itinerario:
             areas_query = areas_query.filter(
                 models.Area.categoria.in_(solicitud.intereses)
             )
             logger.info(f"🔍 Filtrando por intereses: {solicitud.intereses}")
-        elif not solicitud.tiempo_disponible:
-            logger.info("✅ Sin límite de tiempo - usando TODAS las áreas")
+        elif not tiempo_para_itinerario:
+            logger.info("✅ Sin límite - usando TODAS las áreas")
         
         areas_disponibles = areas_query.order_by(models.Area.orden_recomendado).all()
         
@@ -94,8 +126,6 @@ async def generar_itinerario_progresivo(
                 status_code=400,
                 detail="No hay áreas disponibles que coincidan con tus intereses"
             )
-        
-        logger.info(f"📍 {len(areas_disponibles)} áreas disponibles")
         
         areas_dict = [
             {
@@ -129,7 +159,7 @@ async def generar_itinerario_progresivo(
         itinerario_resultado = ia_service.generar_itinerario_progresivo(
             visitante_nombre=visitante.nombre,
             intereses=solicitud.intereses,
-            tiempo_disponible=solicitud.tiempo_disponible,
+            tiempo_disponible=tiempo_para_itinerario,
             nivel_detalle=solicitud.nivel_detalle.value,
             areas_disponibles=areas_dict,
             incluir_descansos=solicitud.incluir_descansos,
@@ -140,14 +170,19 @@ async def generar_itinerario_progresivo(
         tiempo_fin = time.time()
         tiempo_generacion = tiempo_fin - tiempo_inicio
         
-        # Actualizar itinerario con resultados
-        nuevo_itinerario.titulo = itinerario_resultado.get('titulo', 'Tu recorrido personalizado')
-        nuevo_itinerario.descripcion = itinerario_resultado.get('descripcion', '')
+        titulo_base = itinerario_resultado.get('titulo', 'Tu recorrido personalizado')
+        
+        descripcion_base = itinerario_resultado.get('descripcion', '')
+        if duracion_ajustada != solicitud.tiempo_disponible and mensaje_horario:
+            descripcion_base = f"⏰ {mensaje_horario}\n\n{descripcion_base}"
+        
+        nuevo_itinerario.titulo = titulo_base
+        nuevo_itinerario.descripcion = descripcion_base
         nuevo_itinerario.duracion_total = itinerario_resultado.get('duracion_total')
         nuevo_itinerario.estado = 'generado'
         nuevo_itinerario.respuesta_ia = itinerario_resultado.get('metadata', {})
         
-        # Crear detalles de áreas
+        # Crear detalles
         for area_data in itinerario_resultado['areas']:
             area = db.query(models.Area).filter(
                 models.Area.codigo == area_data['area_codigo']
@@ -170,20 +205,20 @@ async def generar_itinerario_progresivo(
         db.commit()
         db.refresh(nuevo_itinerario)
         
-        logger.info(f"✅ Itinerario generado en {tiempo_generacion:.1f}s [{ia_service.provider}]")
+        logger.info(f"✅ Listo en {tiempo_generacion:.1f}s [{ia_service.provider}]")
         
         return nuevo_itinerario
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error generando itinerario: {e}", exc_info=True)
+        logger.error(f"❌ Error: {e}", exc_info=True)
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error generando itinerario: {str(e)}")
 
 
 # ============================================
-# Estado de generación
+# Estado de generación (sin cambios)
 # ============================================
 
 @router.get("/itinerario/{itinerario_id}/estado-generacion")
@@ -220,11 +255,11 @@ async def obtener_estado_generacion(
             "total_areas": total_areas,
             "porcentaje_completado": round(porcentaje, 1),
             "estado": itinerario.estado,
-            "provider": ia_service.provider
+            "provider": ia_service.provider  # 🔥 NUEVO
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error obteniendo estado: {e}")
+        logger.error(f"❌ Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
