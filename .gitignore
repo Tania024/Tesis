@@ -1,5 +1,28 @@
-.env
+# Env con secrets
 .env
 
-# Local Netlify folder
+# Imagenes Docker exportadas (binarios grandes)
+*.tar.gz
+
+# Node
+node_modules/
+dist/
+dev-dist/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Netlify
 .netlify
