@@ -1,0 +1,48 @@
+services:
+
+  # ============================================
+  # Backend - FastAPI
+  # ============================================
+  backend:
+    image: tesis-backend:latest
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-museo_pumapungo}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?Definir DB_PASSWORD en .env}
+      SECRET_KEY: ${SECRET_KEY:-cambiar-en-produccion}
+      AI_PROVIDER: ${AI_PROVIDER:-groq}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${API_URL:-http://localhost:8000}/api/v1/auth/google/callback
+      REDIRECT_URI_BASE: ${API_URL:-http://localhost:8000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app
+
+  # ============================================
+  # Frontend - React (Nginx)
+  # ============================================
+  frontend:
+    image: tesis-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
