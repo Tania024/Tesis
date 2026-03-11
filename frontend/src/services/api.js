@@ -242,6 +242,45 @@ export const itinerariosAPI = {
     }
   },
 
+  // SSE: Conectar al stream de generación de áreas
+  conectarStreamAreas: (itinerarioId, callbacks) => {
+    const url = `${API_URL}/itinerarios/${itinerarioId}/stream`;
+    console.log('SSE: Conectando a', url);
+
+    const eventSource = new EventSource(url);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('SSE evento:', data.type, data.area_nombre || '');
+
+        if (data.type === 'inicio' && callbacks.onInicio) {
+          callbacks.onInicio(data);
+        } else if (data.type === 'area_completada' && callbacks.onAreaCompletada) {
+          callbacks.onAreaCompletada(data);
+        } else if (data.type === 'completado' && callbacks.onCompletado) {
+          callbacks.onCompletado(data);
+          eventSource.close();
+        } else if (data.type === 'error' && callbacks.onError) {
+          callbacks.onError(data);
+          eventSource.close();
+        }
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error:', err);
+      if (callbacks.onError) {
+        callbacks.onError({ message: 'Conexión SSE perdida' });
+      }
+      eventSource.close();
+    };
+
+    return eventSource;
+  },
+
   generarCertificado: async (itinerarioId) => {
     try {
       const response = await api.post(`/itinerarios/${itinerarioId}/certificado`);

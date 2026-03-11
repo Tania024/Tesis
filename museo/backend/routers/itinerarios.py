@@ -1,13 +1,15 @@
 # routers/itinerarios.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
 import logging
+import json as json_module
 from datetime import datetime, timezone
 
-from database import get_db
+from database import get_db, SessionLocal
 from utils.horarios_museo import validar_horario_museo, ajustar_itinerario_por_tiempo
 from models import Itinerario, Perfil, Visitante, Area, ItinerarioDetalle
 from schemas import (
@@ -259,6 +261,177 @@ async def generar_itinerario_ia(
         db.rollback()
         logger.error(f"❌ Error al generar itinerario: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
+# SSE - Streaming de generación de áreas
+# ============================================
+
+@router.get("/{itinerario_id}/stream")
+async def stream_generacion_areas(itinerario_id: int):
+    """
+    SSE endpoint: genera contenido de cada área y lo envía en tiempo real.
+    El frontend se conecta aquí después de crear el itinerario.
+    """
+    def generar_eventos():
+        db = SessionLocal()
+        try:
+            # Obtener itinerario con detalles
+            itinerario = db.query(Itinerario).filter(Itinerario.id == itinerario_id).first()
+            if not itinerario:
+                yield f"data: {json_module.dumps({'type': 'error', 'message': 'Itinerario no encontrado'})}\n\n"
+                return
+
+            # Obtener perfil y visitante
+            perfil = db.query(Perfil).filter(Perfil.id == itinerario.perfil_id).first()
+            visitante = db.query(Visitante).filter(Visitante.id == perfil.visitante_id).first() if perfil else None
+            nombre_completo = f"{visitante.nombre} {visitante.apellido or ''}".strip() if visitante else "Visitante"
+
+            # Obtener intereses del perfil
+            intereses = perfil.intereses if perfil and perfil.intereses else ['cultura']
+
+            # Obtener detalles pendientes (sin contenido generado)
+            detalles = db.query(ItinerarioDetalle).filter(
+                ItinerarioDetalle.itinerario_id == itinerario_id
+            ).order_by(ItinerarioDetalle.orden).all()
+
+            if not detalles:
+                yield f"data: {json_module.dumps({'type': 'error', 'message': 'No hay áreas en el itinerario'})}\n\n"
+                return
+
+            total_areas = len(detalles)
+            yield f"data: {json_module.dumps({'type': 'inicio', 'total_areas': total_areas, 'titulo': itinerario.titulo})}\n\n"
+
+            for detalle in detalles:
+                area = db.query(Area).filter(Area.id == detalle.area_id).first()
+                if not area:
+                    continue
+
+                # Si ya tiene contenido generado, enviarlo directamente
+                if detalle.introduccion and detalle.introduccion != "⏳ Generando contenido detallado...":
+                    datos_curiosos = detalle.datos_curiosos
+                    if isinstance(datos_curiosos, str):
+                        try:
+                            datos_curiosos = json_module.loads(datos_curiosos)
+                        except:
+                            datos_curiosos = [datos_curiosos]
+
+                    que_observar = detalle.que_observar
+                    if isinstance(que_observar, str):
+                        try:
+                            que_observar = json_module.loads(que_observar)
+                        except:
+                            que_observar = [que_observar]
+
+                    evento = {
+                        'type': 'area_completada',
+                        'detalle_id': detalle.id,
+                        'orden': detalle.orden,
+                        'area_nombre': area.nombre,
+                        'contenido': {
+                            'introduccion': detalle.introduccion,
+                            'historia_contextual': detalle.historia_contextual,
+                            'datos_curiosos': datos_curiosos or [],
+                            'que_observar': que_observar or [],
+                            'recomendacion': detalle.recomendacion
+                        }
+                    }
+                    yield f"data: {json_module.dumps(evento, ensure_ascii=False)}\n\n"
+                    continue
+
+                # Generar contenido con IA
+                area_dict = {
+                    "id": area.id, "codigo": area.codigo, "nombre": area.nombre,
+                    "descripcion": area.descripcion, "categoria": area.categoria,
+                    "tiempo_minimo": area.tiempo_minimo, "tiempo_maximo": area.tiempo_maximo
+                }
+                area_estructura = {
+                    "area_codigo": area.codigo,
+                    "orden": detalle.orden,
+                    "tiempo_sugerido": detalle.tiempo_sugerido
+                }
+
+                try:
+                    logger.info(f"SSE: Generando área {area.nombre} (orden {detalle.orden})...")
+                    contenido = ia_service._generar_area_individual_hibrida(
+                        area_estructura, [area_dict], nombre_completo,
+                        intereses, 'profundo', es_primera=(detalle.orden == 1)
+                    )
+
+                    # Guardar en BD
+                    datos = contenido.get('datos_curiosos', [])
+                    if isinstance(datos, str):
+                        try:
+                            datos = json_module.loads(datos)
+                        except:
+                            datos = [datos]
+
+                    obs = contenido.get('que_observar', [])
+                    if isinstance(obs, str):
+                        try:
+                            obs = json_module.loads(obs)
+                        except:
+                            obs = [obs]
+
+                    detalle.introduccion = contenido.get('introduccion', '')
+                    detalle.historia_contextual = contenido.get('historia_contextual', '')
+                    detalle.datos_curiosos = datos
+                    detalle.que_observar = obs
+                    detalle.recomendacion = contenido.get('recomendacion', '')
+                    db.commit()
+
+                    logger.info(f"SSE: Área {area.nombre} completada y guardada")
+
+                    evento = {
+                        'type': 'area_completada',
+                        'detalle_id': detalle.id,
+                        'orden': detalle.orden,
+                        'area_nombre': area.nombre,
+                        'contenido': {
+                            'introduccion': contenido.get('introduccion', ''),
+                            'historia_contextual': contenido.get('historia_contextual', ''),
+                            'datos_curiosos': datos,
+                            'que_observar': obs,
+                            'recomendacion': contenido.get('recomendacion', '')
+                        }
+                    }
+                    yield f"data: {json_module.dumps(evento, ensure_ascii=False)}\n\n"
+
+                except Exception as e:
+                    logger.error(f"SSE: Error generando {area.nombre}: {e}")
+                    evento = {
+                        'type': 'area_completada',
+                        'detalle_id': detalle.id,
+                        'orden': detalle.orden,
+                        'area_nombre': area.nombre,
+                        'contenido': {
+                            'introduccion': f"Bienvenido a {area.nombre}",
+                            'historia_contextual': area.descripcion or 'Área del museo',
+                            'datos_curiosos': ['Área fascinante del museo'],
+                            'que_observar': ['Observa los detalles'],
+                            'recomendacion': 'Tómate tu tiempo para explorar'
+                        }
+                    }
+                    yield f"data: {json_module.dumps(evento, ensure_ascii=False)}\n\n"
+
+            # Evento final
+            yield f"data: {json_module.dumps({'type': 'completado', 'message': 'Todas las áreas generadas'})}\n\n"
+
+        except Exception as e:
+            logger.error(f"SSE Error: {e}")
+            yield f"data: {json_module.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        finally:
+            db.close()
+
+    return StreamingResponse(
+        generar_eventos(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
 
 # ============================================
 # CREATE - Manual

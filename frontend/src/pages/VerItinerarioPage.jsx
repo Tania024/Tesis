@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { itinerariosAPI } from '../services/api';
@@ -9,10 +9,14 @@ const VerItinerarioPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuth();
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [itinerario, setItinerario] = useState(null);
+  const [generandoAreas, setGenerandoAreas] = useState(false);
+  const [areasGeneradas, setAreasGeneradas] = useState(0);
+  const [totalAreas, setTotalAreas] = useState(0);
+  const eventSourceRef = useRef(null);
   const completado = searchParams.get('completado') === 'true';
 
   useEffect(() => {
@@ -22,17 +26,33 @@ const VerItinerarioPage = () => {
     }
 
     cargarItinerario();
+
+    return () => {
+      // Cleanup SSE al desmontar
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
   }, [id, isAuthenticated]);
 
   const cargarItinerario = async () => {
     try {
       setLoading(true);
       console.log('📍 Cargando itinerario:', id);
-      
+
       const data = await itinerariosAPI.obtenerItinerario(id);
-      
+
       console.log('✅ Itinerario cargado:', data);
       setItinerario(data);
+
+      // Verificar si hay áreas pendientes de generar
+      const tieneAreasPendientes = data.detalles?.some(
+        d => !d.introduccion || d.introduccion === '⏳ Generando contenido detallado...'
+      );
+
+      if (tieneAreasPendientes) {
+        iniciarSSE();
+      }
     } catch (err) {
       console.error('❌ Error cargando itinerario:', err);
       setError('Error al cargar el itinerario. Intenta de nuevo.');
@@ -41,14 +61,60 @@ const VerItinerarioPage = () => {
     }
   };
 
+  const iniciarSSE = () => {
+    setGenerandoAreas(true);
+
+    const eventSource = itinerariosAPI.conectarStreamAreas(id, {
+      onInicio: (data) => {
+        console.log('SSE inicio:', data.total_areas, 'áreas');
+        setTotalAreas(data.total_areas);
+        setAreasGeneradas(0);
+      },
+
+      onAreaCompletada: (data) => {
+        console.log('SSE área completada:', data.area_nombre);
+        setAreasGeneradas(prev => prev + 1);
+
+        // Actualizar el detalle en el estado del itinerario
+        setItinerario(prev => {
+          if (!prev) return prev;
+
+          const nuevosDetalles = prev.detalles.map(detalle => {
+            if (detalle.id === data.detalle_id) {
+              return {
+                ...detalle,
+                introduccion: data.contenido.introduccion,
+                historia_contextual: data.contenido.historia_contextual,
+                datos_curiosos: data.contenido.datos_curiosos,
+                que_observar: data.contenido.que_observar,
+                recomendacion: data.contenido.recomendacion
+              };
+            }
+            return detalle;
+          });
+
+          return { ...prev, detalles: nuevosDetalles };
+        });
+      },
+
+      onCompletado: () => {
+        console.log('SSE: Todas las áreas generadas');
+        setGenerandoAreas(false);
+      },
+
+      onError: (data) => {
+        console.error('SSE error:', data.message);
+        setGenerandoAreas(false);
+      }
+    });
+
+    eventSourceRef.current = eventSource;
+  };
+
   const handleIniciarVisita = async () => {
     try {
       console.log('🚀 Iniciando visita del itinerario:', id);
-      
-      // Iniciar el itinerario en el backend
       await itinerariosAPI.iniciarItinerario(id);
-      
-      // Navegar a la página de visita en progreso
       navigate(`/visita/${id}`);
     } catch (err) {
       console.error('❌ Error iniciando visita:', err);
@@ -56,20 +122,21 @@ const VerItinerarioPage = () => {
     }
   };
 
-const formatearFecha = (fecha) => {
-  return new Date(fecha).toLocaleString('es-EC', {
-    timeZone: 'America/Guayaquil',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-};
+  const formatearFecha = (fecha) => {
+    return new Date(fecha).toLocaleString('es-EC', {
+      timeZone: 'America/Guayaquil',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
 
-
-
+  const esAreaPendiente = (detalle) => {
+    return !detalle.introduccion || detalle.introduccion === '⏳ Generando contenido detallado...';
+  };
 
   if (loading) {
     return (
@@ -134,6 +201,24 @@ const formatearFecha = (fecha) => {
           </div>
         )}
 
+        {/* Barra de progreso SSE */}
+        {generandoAreas && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+              <span className="text-blue-800 font-medium">
+                Generando contenido con IA... ({areasGeneradas}/{totalAreas} áreas)
+              </span>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                style={{ width: totalAreas > 0 ? `${(areasGeneradas / totalAreas) * 100}%` : '0%' }}
+              ></div>
+            </div>
+          </div>
+        )}
+
         {/* Card principal */}
         <div className="card mb-6">
           {/* Badge de estado */}
@@ -142,7 +227,7 @@ const formatearFecha = (fecha) => {
               <span>{estado.icon}</span>
               <span>{estado.label}</span>
             </span>
-            
+
             <div className="text-right">
               <div className="text-sm text-gray-600">Generado</div>
             </div>
@@ -168,14 +253,14 @@ const formatearFecha = (fecha) => {
               </div>
               <div className="text-sm text-gray-600 mt-1">Minutos</div>
             </div>
-            
+
             <div className="text-center">
               <div className="text-3xl font-bold text-primary-600">
                 {itinerario.detalles?.length || 0}
               </div>
               <div className="text-sm text-gray-600 mt-1">Áreas</div>
             </div>
-            
+
             <div className="text-center">
               <div className="text-3xl font-bold text-primary-600">
                 {itinerario.fecha_generacion ? formatearFecha(itinerario.fecha_generacion).split(',')[0] : 'N/A'}
@@ -188,10 +273,15 @@ const formatearFecha = (fecha) => {
           {itinerario.estado === 'generado' && (
             <button
               onClick={handleIniciarVisita}
-              className="w-full bg-gradient-to-r from-primary-600 to-blue-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:from-primary-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
+              disabled={generandoAreas}
+              className={`w-full text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 ${
+                generandoAreas
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-primary-600 to-blue-600 hover:from-primary-700 hover:to-blue-700'
+              }`}
             >
-              <span className="text-2xl">🚀</span>
-              <span>Iniciar Visita Ahora</span>
+              <span className="text-2xl">{generandoAreas ? '⏳' : '🚀'}</span>
+              <span>{generandoAreas ? 'Esperando generación...' : 'Iniciar Visita Ahora'}</span>
             </button>
           )}
 
@@ -220,20 +310,32 @@ const formatearFecha = (fecha) => {
                 .map((detalle) => (
                   <div
                     key={detalle.id}
-                    className="border-2 border-gray-200 rounded-lg p-6 hover:border-primary-300 transition-colors"
+                    className={`border-2 rounded-lg p-6 transition-all duration-500 ${
+                      esAreaPendiente(detalle)
+                        ? 'border-gray-200 bg-gray-50 opacity-60'
+                        : 'border-gray-200 hover:border-primary-300'
+                    }`}
                   >
                     {/* Header del área */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-primary-500 text-white rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0">
-                          {detalle.orden}
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0 ${
+                          esAreaPendiente(detalle)
+                            ? 'bg-gray-300 text-gray-600'
+                            : 'bg-primary-500 text-white'
+                        }`}>
+                          {esAreaPendiente(detalle) ? (
+                            <div className="animate-spin w-6 h-6 border-2 border-gray-500 border-t-transparent rounded-full"></div>
+                          ) : (
+                            detalle.orden
+                          )}
                         </div>
                         <div>
                           <h3 className="text-xl font-bold text-gray-900">
                             {detalle.area?.nombre || 'Área'}
                           </h3>
                           <p className="text-gray-600 text-sm mt-1">
-                            ⏱️ {detalle.tiempo_sugerido || 20} minutos • 
+                            ⏱️ {detalle.tiempo_sugerido || 20} minutos •
                             📍 Piso {detalle.area?.piso || 1}
                             {detalle.area?.zona && ` • ${detalle.area.zona}`}
                           </p>
@@ -241,39 +343,87 @@ const formatearFecha = (fecha) => {
                       </div>
                     </div>
 
-                    {/* Introducción */}
-                    {detalle.introduccion && (
-                      <p className="text-gray-700 mb-4 leading-relaxed">
-                        {detalle.introduccion}
-                      </p>
-                    )}
-
-                    {/* Puntos clave */}
-                    {detalle.puntos_clave && detalle.puntos_clave.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                          <span>💡</span>
-                          <span>Qué observar:</span>
-                        </h4>
-                        <ul className="space-y-1">
-                          {detalle.puntos_clave.map((punto, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-gray-700">
-                              <span className="text-primary-500">•</span>
-                              <span>{punto}</span>
-                            </li>
-                          ))}
-                        </ul>
+                    {/* Contenido del área */}
+                    {esAreaPendiente(detalle) ? (
+                      <div className="flex items-center gap-3 text-gray-500 py-4">
+                        <div className="animate-pulse flex-1">
+                          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                        </div>
                       </div>
-                    )}
+                    ) : (
+                      <>
+                        {/* Introducción */}
+                        {detalle.introduccion && (
+                          <p className="text-gray-700 mb-4 leading-relaxed">
+                            {detalle.introduccion}
+                          </p>
+                        )}
 
-                    {/* Recomendación */}
-                    {detalle.recomendacion && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-green-800 flex items-start gap-2">
-                          <span className="text-xl">✨</span>
-                          <span>{detalle.recomendacion}</span>
-                        </p>
-                      </div>
+                        {/* Datos curiosos */}
+                        {detalle.datos_curiosos && detalle.datos_curiosos.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                              <span>🧠</span>
+                              <span>Datos curiosos:</span>
+                            </h4>
+                            <ul className="space-y-1">
+                              {detalle.datos_curiosos.map((dato, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-gray-700">
+                                  <span className="text-amber-500">★</span>
+                                  <span>{dato}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Qué observar */}
+                        {detalle.que_observar && detalle.que_observar.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                              <span>👀</span>
+                              <span>Qué observar:</span>
+                            </h4>
+                            <ul className="space-y-1">
+                              {detalle.que_observar.map((punto, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-gray-700">
+                                  <span className="text-primary-500">•</span>
+                                  <span>{punto}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Puntos clave (legacy) */}
+                        {detalle.puntos_clave && detalle.puntos_clave.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                              <span>💡</span>
+                              <span>Puntos clave:</span>
+                            </h4>
+                            <ul className="space-y-1">
+                              {detalle.puntos_clave.map((punto, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-gray-700">
+                                  <span className="text-primary-500">•</span>
+                                  <span>{punto}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Recomendación */}
+                        {detalle.recomendacion && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <p className="text-green-800 flex items-start gap-2">
+                              <span className="text-xl">✨</span>
+                              <span>{detalle.recomendacion}</span>
+                            </p>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}
