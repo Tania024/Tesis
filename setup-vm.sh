@@ -11,19 +11,21 @@ echo " Museo Pumapungo - Instalacion en VM"
 echo "============================================"
 
 # ============================================
-# 1. Instalar PostgreSQL 15
+# 1. Instalar PostgreSQL (version disponible del sistema)
 # ============================================
 echo ""
-echo "[1/5] Instalando PostgreSQL 15..."
+echo "[1/5] Instalando PostgreSQL..."
 
 if ! command -v psql &> /dev/null; then
     apt-get update
-    apt-get install -y postgresql-15 postgresql-client-15
+    apt-get install -y postgresql postgresql-client
     systemctl enable postgresql
     systemctl start postgresql
-    echo "  PostgreSQL 15 instalado."
+    PG_VER=$(psql --version | grep -oP '\d+' | head -1)
+    echo "  PostgreSQL ${PG_VER} instalado."
 else
-    echo "  PostgreSQL ya esta instalado."
+    PG_VER=$(psql --version | grep -oP '\d+' | head -1)
+    echo "  PostgreSQL ${PG_VER} ya esta instalado."
 fi
 
 # ============================================
