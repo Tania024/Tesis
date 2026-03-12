@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => ({  // ✅ Agrega ({ mode })
+  base: mode === 'production' ? '/pumapungo/' : '/',
   plugins: [
     react(),
     // ✅ PWA solo en producción, NO en desarrollo
@@ -14,7 +15,7 @@ export default defineConfig(({ mode }) => ({  // ✅ Agrega ({ mode })
         name: 'Museo Pumapungo - Sistema de Itinerarios IA',
         short_name: 'Museo Pumapungo',
         description: 'Sistema inteligente de itinerarios personalizados para el Museo Pumapungo',
-        start_url: '/',
+        start_url: '/pumapungo/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#E74C3C',

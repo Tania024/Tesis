@@ -25,7 +25,7 @@ const Navbar = () => {
             onClick={() => setMenuOpen(false)}
           >
             <img
-              src="/images/logo-museo.png"
+              src={`${import.meta.env.BASE_URL}images/logo-museo.png`}
               alt="Museo Pumapungo"
               className="w-14 h-15 object-contain"
             />

@@ -39,7 +39,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: /api/v1
+        VITE_API_URL: /pumapungo/api/v1
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     image: tesis-frontend:latest
     restart: unless-stopped

@@ -42,7 +42,7 @@ const Home = () => {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url('/images/logopumapungo2.jpeg')`,
+            backgroundImage: `url('${import.meta.env.BASE_URL}images/logopumapungo2.jpeg')`,
           }}
         >
           {/* Overlay oscuro para mejorar legibilidad */}
