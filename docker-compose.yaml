@@ -4,6 +4,8 @@ services:
   # Backend - FastAPI
   # ============================================
   backend:
+    build:
+      context: ./museo/backend
     image: tesis-backend:latest
     restart: unless-stopped
     ports:
@@ -34,6 +36,11 @@ services:
   # Frontend - React (Nginx)
   # ============================================
   frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /pumapungo/api/v1
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     image: tesis-frontend:latest
     restart: unless-stopped
     ports:
