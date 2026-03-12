@@ -24,8 +24,8 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_REDIRECT_URI: ${API_URL:-http://localhost:8000}/api/v1/auth/google/callback
-      REDIRECT_URI_BASE: ${API_URL:-http://localhost:8000}
+      GOOGLE_REDIRECT_URI: ${FRONTEND_URL:-http://localhost:3000}/api/v1/auth/google/callback
+      REDIRECT_URI_BASE: ${FRONTEND_URL:-http://localhost:3000}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     extra_hosts:
       - "host.docker.internal:host-gateway"
