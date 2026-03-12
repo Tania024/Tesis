@@ -4,6 +4,8 @@ services:
   # Backend - FastAPI
   # ============================================
   backend:
+    build:
+      context: ./museo/backend
     image: tesis-backend:latest
     restart: unless-stopped
     ports:
@@ -14,7 +16,7 @@ services:
       DB_HOST: ${DB_HOST:-host.docker.internal}
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-museo_pumapungo}
-      DB_USER: ${DB_USER:-postgres}
+      DB_USER: ${DB_USER:-museo_app}
       DB_PASSWORD: ${DB_PASSWORD:?Definir DB_PASSWORD en .env}
       SECRET_KEY: ${SECRET_KEY:-cambiar-en-produccion}
       AI_PROVIDER: ${AI_PROVIDER:-groq}
@@ -34,6 +36,11 @@ services:
   # Frontend - React (Nginx)
   # ============================================
   frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api/v1
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     image: tesis-frontend:latest
     restart: unless-stopped
     ports:
