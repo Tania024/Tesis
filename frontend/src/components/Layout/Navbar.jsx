@@ -63,6 +63,12 @@ const Navbar = () => {
                 <Link to="/admin" className="text-gray-700 hover:text-primary-600 font-medium flex gap-1">
                   📊 Admin
                 </Link>
+                <a
+                  href="https://cloudcomputing.ups.edu.ec/pumapungocore/serendipia/configuracion"
+                  className="text-gray-700 hover:text-primary-600 font-medium flex gap-1"
+                >
+                  🏛️ Serendipia
+                </a>
 
                 {/* Usuario */}
                 <div className="flex items-center space-x-3 border-l pl-6 ml-2">
@@ -99,6 +105,12 @@ const Navbar = () => {
                 <Link to="/areas" className="text-gray-700 hover:text-primary-600 font-medium">
                   Áreas
                 </Link>
+                <a
+                  href="https://cloudcomputing.ups.edu.ec/pumapungocore/serendipia/configuracion"
+                  className="text-gray-700 hover:text-primary-600 font-medium"
+                >
+                  🏛️ Serendipia
+                </a>
                 <Link to="/login" className="btn-primary px-6 py-2">
                   Iniciar Sesión
                 </Link>
@@ -125,6 +137,13 @@ const Navbar = () => {
               <Link to="/admin" onClick={() => setMenuOpen(false)} className="block">
                 📊 Admin
               </Link>
+              <a
+                href="https://cloudcomputing.ups.edu.ec/pumapungocore/serendipia/configuracion"
+                onClick={() => setMenuOpen(false)}
+                className="block"
+              >
+                🏛️ Serendipia
+              </a>
 
               <button
                 onClick={handleLogout}
