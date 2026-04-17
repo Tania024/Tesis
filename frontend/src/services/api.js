@@ -456,5 +456,36 @@ export const evaluacionesAPI = {
   }
 };
 
+// ============================================
+// REPORTES API (Admin - Descarga CSV)
+// ============================================
+
+const descargarCSV = async (endpoint, nombreArchivo) => {
+  try {
+    const response = await api.get(endpoint, {
+      responseType: 'blob'
+    });
+    const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', nombreArchivo);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    return true;
+  } catch (error) {
+    console.error(`❌ Error descargando ${nombreArchivo}:`, error);
+    throw error;
+  }
+};
+
+export const reportesAPI = {
+  descargarVisitantes: () => descargarCSV('/reportes/visitantes', `visitantes_${new Date().toISOString().slice(0,10)}.csv`),
+  descargarEvaluaciones: () => descargarCSV('/reportes/evaluaciones', `evaluaciones_${new Date().toISOString().slice(0,10)}.csv`),
+  descargarResumen: () => descargarCSV('/reportes/resumen', `resumen_museo_${new Date().toISOString().slice(0,10)}.csv`),
+};
+
 // Exportar instancia de axios por defecto
 export default api;

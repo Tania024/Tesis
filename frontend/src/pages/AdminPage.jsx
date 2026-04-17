@@ -2,7 +2,7 @@
 
 
 import { useState, useEffect } from 'react';
-import { visitantesAPI, itinerariosAPI, historialAPI, evaluacionesAPI } from '../services/api';
+import { visitantesAPI, itinerariosAPI, historialAPI, evaluacionesAPI, reportesAPI } from '../services/api';
 import LoadingSpinner from '../components/Layout/LoadingSpinner';
 
 const AdminPage = () => {
@@ -17,6 +17,7 @@ const AdminPage = () => {
   const [estadisticasEvaluaciones, setEstadisticasEvaluaciones] = useState(null);
   const [horasPico, setHorasPico] = useState([]);
   const [visitantesRecientes, setVisitantesRecientes] = useState([]);
+  const [descargando, setDescargando] = useState(null);
 
   useEffect(() => {
     cargarEstadisticas();
@@ -208,6 +209,24 @@ const formatearFecha = (fecha) => {
     if (porcentaje >= 60) return 'bg-blue-500';
     if (porcentaje >= 40) return 'bg-yellow-500';
     return 'bg-red-500';
+  };
+
+  const handleDescargar = async (tipo) => {
+    try {
+      setDescargando(tipo);
+      if (tipo === 'visitantes') {
+        await reportesAPI.descargarVisitantes();
+      } else if (tipo === 'evaluaciones') {
+        await reportesAPI.descargarEvaluaciones();
+      } else if (tipo === 'resumen') {
+        await reportesAPI.descargarResumen();
+      }
+    } catch (err) {
+      console.error('Error descargando reporte:', err);
+      alert('Error al descargar el reporte. Verifica que el backend esté activo.');
+    } finally {
+      setDescargando(null);
+    }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -627,6 +646,93 @@ const formatearFecha = (fecha) => {
               No hay visitantes registrados aún
             </p>
           )}
+        </div>
+
+        {/* Sección de Descarga de Reportes */}
+        <div className="bg-white rounded-xl shadow-md p-6 mt-8 mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <span>📥</span>
+            Descargar Reportes
+          </h2>
+          <p className="text-gray-500 text-sm mb-6">
+            Exporta los datos del museo en formato CSV para análisis externo
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Reporte Visitantes */}
+            <button
+              onClick={() => handleDescargar('visitantes')}
+              disabled={descargando !== null}
+              className="group relative p-5 rounded-xl border-2 border-primary-200 hover:border-primary-500 bg-gradient-to-br from-primary-50 to-white transition-all duration-300 hover:shadow-lg text-left disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">👥</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Visitantes</h3>
+                  <p className="text-xs text-gray-500">Datos completos</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Nombre, email, tipo, país, fecha de registro y más
+              </p>
+              <div className="flex items-center gap-2 text-primary-600 font-medium text-sm">
+                {descargando === 'visitantes' ? (
+                  <><span className="animate-spin">⏳</span> Descargando...</>
+                ) : (
+                  <><span>📄</span> Descargar CSV</>
+                )}
+              </div>
+            </button>
+
+            {/* Reporte Evaluaciones */}
+            <button
+              onClick={() => handleDescargar('evaluaciones')}
+              disabled={descargando !== null}
+              className="group relative p-5 rounded-xl border-2 border-yellow-200 hover:border-yellow-500 bg-gradient-to-br from-yellow-50 to-white transition-all duration-300 hover:shadow-lg text-left disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">⭐</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Evaluaciones</h3>
+                  <p className="text-xs text-gray-500">Feedback de visitantes</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Calificaciones, respuestas Sí/No y comentarios
+              </p>
+              <div className="flex items-center gap-2 text-yellow-600 font-medium text-sm">
+                {descargando === 'evaluaciones' ? (
+                  <><span className="animate-spin">⏳</span> Descargando...</>
+                ) : (
+                  <><span>📄</span> Descargar CSV</>
+                )}
+              </div>
+            </button>
+
+            {/* Reporte Resumen */}
+            <button
+              onClick={() => handleDescargar('resumen')}
+              disabled={descargando !== null}
+              className="group relative p-5 rounded-xl border-2 border-purple-200 hover:border-purple-500 bg-gradient-to-br from-purple-50 to-white transition-all duration-300 hover:shadow-lg text-left disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-3xl group-hover:scale-110 transition-transform">📊</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Resumen General</h3>
+                  <p className="text-xs text-gray-500">Estadísticas consolidadas</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Totales, promedios y métricas del museo
+              </p>
+              <div className="flex items-center gap-2 text-purple-600 font-medium text-sm">
+                {descargando === 'resumen' ? (
+                  <><span className="animate-spin">⏳</span> Descargando...</>
+                ) : (
+                  <><span>📄</span> Descargar CSV</>
+                )}
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Resumen Final */}

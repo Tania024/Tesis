@@ -177,7 +177,7 @@ async def global_exception_handler(request, exc):
 # ROUTERS
 # ============================================
 
-from routers import visitantes, perfiles, areas, itinerarios, itinerario_detalles, historial, ia, auth_google, evaluaciones, certificado
+from routers import visitantes, perfiles, areas, itinerarios, itinerario_detalles, historial, ia, auth_google, evaluaciones, certificado, reportes
 
 app.include_router(visitantes.router, prefix=f"{settings.API_V1_PREFIX}/visitantes", tags=["Visitantes"])
 app.include_router(perfiles.router, prefix=f"{settings.API_V1_PREFIX}/perfiles", tags=["Perfiles"])
@@ -189,6 +189,7 @@ app.include_router(ia.router, prefix=f"{settings.API_V1_PREFIX}/ia", tags=["Inte
 app.include_router(auth_google.router, prefix=f"{settings.API_V1_PREFIX}/auth", tags=["🔐 Autenticación Google"])
 app.include_router(evaluaciones.router, prefix=f"{settings.API_V1_PREFIX}/evaluaciones", tags=["Evaluaciones"])
 app.include_router(certificado.router, prefix=f"{settings.API_V1_PREFIX}", tags=["Certificados"])
+app.include_router(reportes.router, prefix=f"{settings.API_V1_PREFIX}/reportes", tags=["📥 Reportes"])
 
 # ============================================
 # EJECUTAR
